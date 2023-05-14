@@ -1,11 +1,12 @@
 package asu.foe.sketchy;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 import javafx.application.Application;
 
-// Testing Eclipse VC
 @SpringBootApplication
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 public class SketchyApplication {
 
 	public static void main(String[] args) {

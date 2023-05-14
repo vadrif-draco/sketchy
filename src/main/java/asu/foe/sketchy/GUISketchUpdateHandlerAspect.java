@@ -5,7 +5,6 @@ import java.time.Instant;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -24,14 +23,14 @@ public class GUISketchUpdateHandlerAspect {
 	@Autowired
 	private KafkaTemplate<String, GUISketchUpdateTransaction> guiSketchUpdateKafkaTemplate;
 
-	// Pointcut to execute on all the methods of all classes in application
-	@Pointcut("within(asu.foe.sketchy.*)")
-	public void allMethodsPointcut() {}
-
-	@Before("allMethodsPointcut()")
-	public void adviceBeforeAllMethodsPointcut(JoinPoint joinPoint) {
-		System.out.println("\n(asu.foe.sketchy.*) Before method: " + joinPoint.getSignature());
-	}
+//	// Pointcut to execute on all the methods of all classes in application
+//	@Pointcut("within(asu.foe.sketchy.*)")
+//	public void allMethodsPointcut() {}
+//
+//	@Before("allMethodsPointcut()")
+//	public void adviceBeforeAllMethodsPointcut(JoinPoint joinPoint) {
+//		System.out.println("\n(asu.foe.sketchy.*) Before method: " + joinPoint.getSignature());
+//	}
 
 	// Pointcut for GUI Sketch Scene Handler
 	@Pointcut("execution(* asu.foe.sketchy.GUISketchUpdateHandlerService.handle*(..))")
@@ -43,8 +42,11 @@ public class GUISketchUpdateHandlerAspect {
 		// Prepare a new sketch update transaction to send through kafka
 		GUISketchUpdateTransaction transaction = new GUISketchUpdateTransaction();
 
-		// Set the transaction Id as the current epoch timestamp in milliseconds
-		transaction.setTransactionId(Instant.now().toEpochMilli());
+		// Set the session Id (unique per program run) for the transaction
+		transaction.setSessionId(SketchyApplication.sessionId);
+
+		// Set the transaction timestamp as the current epoch in milliseconds
+		transaction.setTimestamp(Instant.now().toEpochMilli());
 
 		// Get the sketch at this moment (right after the handler updated it)
 		GUISketchScene sketch = (GUISketchScene) joinPoint.getArgs()[0];

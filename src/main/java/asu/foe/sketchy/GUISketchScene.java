@@ -2,6 +2,8 @@ package asu.foe.sketchy;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.PartitionOffset;
+import org.springframework.kafka.annotation.TopicPartition;
 import org.springframework.stereotype.Component;
 
 import asu.foe.sketchy.Pen.DrawingMode;
@@ -180,29 +182,37 @@ public class GUISketchScene {
 	}
 
 	// TODO: Use the actual sketch id
-	@KafkaListener(topics = "sketch-updates", groupId = "sketch-id", containerFactory = "guiSketchUpdateKafkaListenerContainerFactory")
+	@KafkaListener(//
+				topicPartitions = { @TopicPartition( // Topic/partition information for this listener
+							topic = "sketch-updates", // The topic name
+							partitionOffsets = @PartitionOffset(partition = "0", initialOffset = "0")) }, // The partition offset (start from beginning)
+				groupId = "sketch-id", // The group ID which for our use case decides the sketch whose updates we want to listen to
+				containerFactory = "guiSketchUpdateKafkaListenerContainerFactory" // The factory for the listener
+	)
 	public void handleIncomingChanges(GUISketchUpdateTransaction transaction) {
-		Platform.runLater(new GUISketchSceneRunnable(this) {
-			@Override
-			public void run() {
-				switch (transaction.getUpdateType()) {
-				case ADD:
-					// All "node addition" operations are handled on the initial mouse press event
-					incomingUpdatesHandler.handleMousePress(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-					break;
-				case EDIT:
-					// All "node editing" operations are handled on the mouse drag event
-					incomingUpdatesHandler.handleMouseDrag(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-					break;
-				case REMOVE:
-					// All "node removal" operations are handled upon mouse release
-					incomingUpdatesHandler.handleMouseRelease(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-					break;
-				default:
-					break;
+		if (transaction.getSessionId() != SketchyApplication.sessionId) {
+			Platform.runLater(new GUISketchSceneRunnable(this) {
+				@Override
+				public void run() {
+					switch (transaction.getUpdateType()) {
+					case ADD:
+						// All "node addition" operations are handled on the initial mouse press event
+						incomingUpdatesHandler.handleMousePress(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+						break;
+					case EDIT:
+						// All "node editing" operations are handled on the mouse drag event
+						incomingUpdatesHandler.handleMouseDrag(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+						break;
+					case REMOVE:
+						// All "node removal" operations are handled upon mouse release
+						incomingUpdatesHandler.handleMouseRelease(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+						break;
+					default:
+						break;
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 
 }

@@ -11,24 +11,28 @@ public class GUISketchUpdateTransaction {
 		REMOVE,
 	}
 
-	private long transactionId;
+	private long sessionId;
+	private long timestamp;
 	private Pen pen;
 	private double mouseX;
 	private double mouseY;
 	private UpdateType updateType;
 
 	public GUISketchUpdateTransaction() { super(); }
-	public GUISketchUpdateTransaction(long transactionId, Pen pen, double mouseX, double mouseY, UpdateType updateType) {
+	public GUISketchUpdateTransaction(long sessionId, long timestamp, Pen pen, double mouseX, double mouseY, UpdateType updateType) {
 		super();
-		this.transactionId = transactionId;
+		this.sessionId = sessionId;
+		this.timestamp = timestamp;
 		this.pen = pen;
 		this.mouseX = mouseX;
 		this.mouseY = mouseY;
 		this.updateType = updateType;
 	}
 
-	public void setTransactionId(long transactionId) { this.transactionId = transactionId; }
-	public long getTransactionId() { return transactionId; }
+	public long getSessionId() { return sessionId; }
+	public void setSessionId(long sessionId) { this.sessionId = sessionId; }
+	public long getTimestamp() { return timestamp; }
+	public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 	public Pen getPen() { return pen; }
 	public void setPen(Pen pen) { this.pen = pen; }
 	public double getMouseX() { return mouseX; }

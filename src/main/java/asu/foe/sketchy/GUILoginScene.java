@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -14,30 +14,20 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 
 
 @Component
 public class GUILoginScene {
-
-    private final UserRepository userRepository;
+	
+	
 
     @Autowired
-    public GUILoginScene(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-    
-    private Stage stage; // new member field
+	private GUIMainStage mainStage;
+    @Autowired
+   GUISketchListScene sketchScene ;
 
-    public GUILoginScene(Stage stage, UserRepository userRepository) {
-        this.stage = stage;
-        this.userRepository = userRepository;
-    }
-
-
-
-	public Scene getScene() {
+	public Parent getRoot(){
 
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -73,16 +63,19 @@ public class GUILoginScene {
             }
 
             // Check if the email and password match an existing user in the database
-            User user = userRepository.findByEmailAndPassword(emailTextField.getText(), passwordField.getText());
-            if (user == null) {
-                Alert alert = new Alert(Alert.AlertType.ERROR, "Incorrect email or password.");
-                alert.showAndWait();
-                return;
-            }
+//            User user = userRepository.findByEmailAndPassword(emailTextField.getText(), passwordField.getText());
+//            if (user == null) {
+//                Alert alert = new Alert(Alert.AlertType.ERROR, "Incorrect email or password.");
+//                alert.showAndWait();
+//                return;
+//            }
 
             // Show a success message or redirect to another page.
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Logged in successfully!");
-            alert.showAndWait();
+//            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Logged in successfully!");
+//            alert.showAndWait();
+            
+            // Redirect to the GUISketchList
+		    mainStage.scene.setRoot(sketchScene.getRoot());
         });
 
       
@@ -99,8 +92,7 @@ public class GUILoginScene {
         root.setAlignment(Pos.CENTER);
         root.getChildren().addAll(grid);
 
-        Scene scene = new Scene(root, 400, 300);
 
-        return scene;
+        return root;
     }
 }

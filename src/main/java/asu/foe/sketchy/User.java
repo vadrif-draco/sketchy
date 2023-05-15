@@ -1,12 +1,15 @@
 package asu.foe.sketchy;
 
 
+import org.springframework.stereotype.Component;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 @Entity
+@Component
 public class User {
 
     @Id
@@ -18,6 +21,10 @@ public class User {
     private String email;
 
     private String password;
+    
+//    @OneToMany(mappedBy = "user")
+//    private List<Sketch> sketches;
+
 
 	public Long getId() {
 		return id;
@@ -59,5 +66,8 @@ public class User {
 		this.password = password;
 	}
  
+	public User() {
+		super();
+	}
 
 }

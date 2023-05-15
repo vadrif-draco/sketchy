@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -15,7 +15,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 @Component
 public class GUIRegistrationScene {
@@ -23,12 +22,15 @@ public class GUIRegistrationScene {
 	 @Autowired
 	private UserRepository userRepository;
 	 
-		private Stage stage; // new member field
+	 
+	 
+	 @Autowired
+	 private GUIMainStage mainStage;
+	 @Autowired
+	 GUILoginScene loginScene ;
 
-		  public void setStage(Stage stage) {
-		        this.stage = stage;
-		    }
-	public Scene getScene() {
+	 
+	public Parent getRoot() {
 		
 		GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -110,12 +112,14 @@ public class GUIRegistrationScene {
 		Label loginLabel = new Label("Already have an account?");
 		Button gotoLoginButton = new Button("Login");
 		gotoLoginButton.setOnAction(event -> {
-			 // Create a new instance of the GUILoginScene and pass the UserRepository and Stage objects to it
-		    GUILoginScene loginScene = new GUILoginScene(stage, userRepository);
+		
 		    // Get the new scene and set it to the stage
-		    Scene scene = loginScene.getScene();
-		    stage.setScene(scene);
+		    mainStage.scene.setRoot(loginScene.getRoot());
+
+		    
 		});
+		
+		
 		HBox loginBox = new HBox(5);
 		loginBox.setAlignment(Pos.CENTER_RIGHT);
 		loginBox.getChildren().addAll(loginLabel, gotoLoginButton);
@@ -125,9 +129,7 @@ public class GUIRegistrationScene {
 		root.setAlignment(Pos.CENTER);
 		root.getChildren().addAll(grid);
 
-		Scene scene = new Scene(root, 400, 300);
-
-		return scene;
+		return root;
 	}
 	
 

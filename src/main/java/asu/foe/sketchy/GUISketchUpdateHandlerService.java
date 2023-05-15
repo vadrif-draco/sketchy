@@ -160,7 +160,7 @@ public class GUISketchUpdateHandlerService {
 						currentRectangle.getHeight()));
 			WritableImage imgReturn = sketch.shapesPane.snapshot(params, null);
 			sketch.shapesPane.getChildren().add(currentRectangle);
-			// TODO: Apply OCR on imgReturn then present a dialog with text OCR'ed
+			// TODO: @AS+NY Apply OCR on imgReturn then present a dialog with text OCR'ed
 			sketch.shapesPane.getChildren().remove(currentRectangle);
 			break;
 		default:

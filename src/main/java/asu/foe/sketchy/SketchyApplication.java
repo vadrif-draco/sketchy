@@ -12,6 +12,8 @@ import javafx.application.Application;
 public class SketchyApplication {
 
 	public static long sessionId = new Random().nextLong();
+	public static User currentUser;
+	public static Sketch currentSketch;
 	public static void main(String[] args) {
 		// To launch a JavaFX application, you have to use the Application.launch method
 		Application.launch(GUIApplication.class, args);

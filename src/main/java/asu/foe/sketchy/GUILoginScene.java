@@ -15,84 +15,83 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-
-
 @Component
 public class GUILoginScene {
-	
-	
 
-    @Autowired
+	@Autowired
 	private GUIMainStage mainStage;
-    @Autowired
-   GUISketchListScene sketchScene ;
 
-	public Parent getRoot(){
+	@Autowired
+	private GUISketchListScene sketchListScene;
 
-        GridPane grid = new GridPane();
-        grid.setAlignment(Pos.CENTER);
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(25, 25, 25, 25));
-        grid.setStyle("-fx-font-size: 14pt;");
+	@Autowired
+	private UserRepository userRepository;
 
-        Label titleLabel = new Label("Login");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
-        grid.add(titleLabel, 0, 0, 2, 1);
+	public Parent getRoot() {
 
-        Label emailLabel = new Label("Email:");
-        TextField emailTextField = new TextField();
-        emailTextField.setPromptText("Enter your email");
-        grid.add(emailLabel, 0, 1);
-        grid.add(emailTextField, 1, 1);
+		GridPane grid = new GridPane();
+		grid.setAlignment(Pos.CENTER);
+		grid.setHgap(10);
+		grid.setVgap(10);
+		grid.setPadding(new Insets(25, 25, 25, 25));
+		grid.setStyle("-fx-font-size: 14pt;");
 
-        Label passwordLabel = new Label("Password:");
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Enter your password");
-        grid.add(passwordLabel, 0, 2);
-        grid.add(passwordField, 1, 2);
+		Label titleLabel = new Label("Login");
+		titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+		grid.add(titleLabel, 0, 0, 2, 1);
 
-        // Create a "Login" button and set its action
-        Button loginButton = new Button("Login");
-        loginButton.setOnAction(event -> {
-            // Validate that all fields are filled in
-            if (emailTextField.getText().isEmpty() || passwordField.getText().isEmpty()) {
-                Alert alert = new Alert(Alert.AlertType.ERROR, "Please fill in all fields.");
-                alert.showAndWait();
-                return;
-            }
+		Label emailLabel = new Label("Email:");
+		TextField emailTextField = new TextField();
+		emailTextField.setPromptText("Enter your email");
+		grid.add(emailLabel, 0, 1);
+		grid.add(emailTextField, 1, 1);
 
-            // Check if the email and password match an existing user in the database
-//            User user = userRepository.findByEmailAndPassword(emailTextField.getText(), passwordField.getText());
-//            if (user == null) {
-//                Alert alert = new Alert(Alert.AlertType.ERROR, "Incorrect email or password.");
-//                alert.showAndWait();
-//                return;
-//            }
+		Label passwordLabel = new Label("Password:");
+		PasswordField passwordField = new PasswordField();
+		passwordField.setPromptText("Enter your password");
+		grid.add(passwordLabel, 0, 2);
+		grid.add(passwordField, 1, 2);
 
-            // Show a success message or redirect to another page.
-//            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Logged in successfully!");
-//            alert.showAndWait();
-            
-            // Redirect to the GUISketchList
-		    mainStage.scene.setRoot(sketchScene.getRoot());
-        });
+		// Create a "Login" button and set its action
+		Button loginButton = new Button("Login");
+		loginButton.setOnAction(event -> {
+			// Validate that all fields are filled in
+			if (emailTextField.getText().isEmpty() || passwordField.getText().isEmpty()) {
+				Alert alert = new Alert(Alert.AlertType.ERROR, "Please fill in all fields.");
+				alert.showAndWait();
+				return;
+			}
 
-      
+			// Check if the email and password match an existing user in the database
+			User user = userRepository.findByEmailAndPassword(emailTextField.getText(), passwordField.getText());
+			if (user == null) {
+				Alert alert = new Alert(Alert.AlertType.ERROR, "Incorrect email or password.");
+				alert.showAndWait();
+				return;
+			}
 
-        // Create an HBox to hold the "Login" 
-        HBox buttonBox = new HBox(10);
-        buttonBox.setAlignment(Pos.CENTER);
-        buttonBox.getChildren().addAll(loginButton);
-        grid.add(buttonBox, 1, 3);
-		buttonBox.setPadding(new Insets(16, 16, 16, 16)); 
+			// Set the current user to this user
+			SketchyApplication.currentUser = user;
 
+			// Show a success message or redirect to another page.
+			Alert alert = new Alert(Alert.AlertType.INFORMATION, "Logged in successfully!");
+			alert.showAndWait();
 
-        VBox root = new VBox(10);
-        root.setAlignment(Pos.CENTER);
-        root.getChildren().addAll(grid);
+			// Redirect to the GUISketchList
+			mainStage.scene.setRoot(sketchListScene.getRoot());
+		});
 
+		// Create an HBox to hold the "Login"
+		HBox buttonBox = new HBox(10);
+		buttonBox.setAlignment(Pos.CENTER);
+		buttonBox.getChildren().addAll(loginButton);
+		grid.add(buttonBox, 1, 3);
+		buttonBox.setPadding(new Insets(16, 16, 16, 16));
 
-        return root;
-    }
+		VBox root = new VBox(10);
+		root.setAlignment(Pos.CENTER);
+		root.getChildren().addAll(grid);
+
+		return root;
+	}
 }

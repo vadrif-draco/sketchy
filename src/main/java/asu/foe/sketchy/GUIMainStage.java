@@ -12,7 +12,6 @@ import javafx.stage.Stage;
 @Component
 public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 
-
 	@Autowired
 	@Lazy
 	GUIRegistrationScene guiRegistrationScene;
@@ -25,8 +24,9 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 	// Shall trigger this event handler
 	@Override
 	public void onApplicationEvent(StageReadyEvent event) {
+		scene = new Scene(guiRegistrationScene.getRoot()); // The first scene we have in the application is registration
+		scene.getStylesheets().add(this.getClass().getResource("/stylesheet.css").toExternalForm());
 		stage = event.getStage();
-		scene = new Scene(guiRegistrationScene.getRoot());
 		stage.setTitle("Sketchy");
 		stage.setScene(scene);
 		stage.setMinWidth(1280);

@@ -19,28 +19,28 @@ import javafx.scene.layout.VBox;
 @Component
 public class GUIRegistrationScene {
 
-	 @Autowired
+	@Autowired
 	private UserRepository userRepository;
-	 
-	 
-	 
-	 @Autowired
-	 private GUIMainStage mainStage;
-	 @Autowired
-	 GUILoginScene loginScene ;
 
-	 
+	@Autowired
+	private GUIMainStage mainStage;
+
+	@Autowired
+	private GUILoginScene loginScene;
+
+	@Autowired
+	private GUISketchListScene sketchListScene;
+
 	public Parent getRoot() {
-		
+
 		GridPane grid = new GridPane();
-        grid.setAlignment(Pos.CENTER);
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(25, 25, 25, 25));
-        grid.setStyle("-fx-font-size: 14pt;");
+		grid.setAlignment(Pos.CENTER);
+		grid.setHgap(10);
+		grid.setVgap(10);
+		grid.setPadding(new Insets(25, 25, 25, 25));
+		grid.setStyle("-fx-font-size: 14pt;");
 
-
-    	Label titleLabel = new Label("Create Account");
+		Label titleLabel = new Label("Create Account");
 		titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 		grid.add(titleLabel, 0, 0, 2, 1);
 
@@ -63,63 +63,54 @@ public class GUIRegistrationScene {
 		grid.add(passwordField, 1, 3);
 
 		// Create a "Register" button and set its action
-		// Create a "Register" button and set its action
 		Button registerButton = new Button("Register");
 		registerButton.setOnAction(event -> {
-		    // Validate that all fields are filled in
-		    if (nameTextField.getText().isEmpty() || emailTextField.getText().isEmpty()
-		            || passwordField.getText().isEmpty()) {
-		        Alert alert = new Alert(Alert.AlertType.ERROR, "Please fill in all fields.");
-		        alert.showAndWait();
-		        return;
-		    }
+			// Validate that all fields are filled in
+			if (nameTextField.getText().isEmpty() || emailTextField.getText().isEmpty()
+						|| passwordField.getText().isEmpty()) {
+				Alert alert = new Alert(Alert.AlertType.ERROR, "Please fill in all fields.");
+				alert.showAndWait();
+				return;
+			}
 			// Validate email format
 			if (!isValidEmail(emailTextField.getText())) {
 				// Show error message
 				showAlert("Invalid email format!");
 				return;
 			}
-		    // Create a new User object with the entered information
-		    User user = new User(null, null, null, null);
-		    user.setName(nameTextField.getText());
-		    user.setEmail(emailTextField.getText());
-		    user.setPassword(passwordField.getText());
+			// Create a new User object with the entered information
+			User user = new User(null, null, null, null);
+			user.setName(nameTextField.getText());
+			user.setEmail(emailTextField.getText());
+			user.setPassword(passwordField.getText());
 
-		    // Save the User object to the database using the UserRepository
-		    userRepository.save(user);
+			// Save the User object to the database using the UserRepository
+			userRepository.save(user);
 
-		    // Show a success message or redirect to another page...
+			// Set the current user to this newly created user
+			SketchyApplication.currentUser = user;
+
+			// Redirect to sketch list upon successful registration...
+			mainStage.scene.setRoot(sketchListScene.getRoot());
 		});
 
-		// Create a "Login" button and set its action
-//		Button loginButton = new Button("Login");
-//		loginButton.setOnAction(event -> {
-//			 // Create a new instance of the GUILoginScene and pass the UserRepository and Stage objects to it
-//		    GUILoginScene loginScene = new GUILoginScene(stage, userRepository);
-//		    // Get the new scene and set it to the stage
-//		    Scene scene = loginScene.getScene();
-//		    stage.setScene(scene);
-//		});
-
-		// Create an HBox to hold the "Register" and "Login" buttons 
+		// Create an HBox to hold the "Register" and "Login" buttons
 		HBox buttonBox = new HBox(10);
 		buttonBox.setAlignment(Pos.CENTER);
 		buttonBox.getChildren().addAll(registerButton);
-		buttonBox.setPadding(new Insets(16, 16, 16, 16)); 
+		buttonBox.setPadding(new Insets(16, 16, 16, 16));
 
 		grid.add(buttonBox, 1, 4);
 
-		Label loginLabel = new Label("Already have an account?");
+		Label loginLabel = new Label("Already have an account? ");
 		Button gotoLoginButton = new Button("Login");
 		gotoLoginButton.setOnAction(event -> {
-		
-		    // Get the new scene and set it to the stage
-		    mainStage.scene.setRoot(loginScene.getRoot());
 
-		    
+			// Get the new scene and set it to the stage
+			mainStage.scene.setRoot(loginScene.getRoot());
+
 		});
-		
-		
+
 		HBox loginBox = new HBox(5);
 		loginBox.setAlignment(Pos.CENTER_RIGHT);
 		loginBox.getChildren().addAll(loginLabel, gotoLoginButton);
@@ -131,20 +122,17 @@ public class GUIRegistrationScene {
 
 		return root;
 	}
-	
 
 	private boolean isValidEmail(String email) {
-		String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\." 
-                + "[a-zA-Z0-9_+&*-]+)*@" 
-                + "(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$"; 
-		
+		String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\."
+					+ "[a-zA-Z0-9_+&*-]+)*@"
+					+ "(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+
 		return email.matches(emailRegex);
 	}
-	
+
 	private void showAlert(String message) {
 		Alert alert = new Alert(AlertType.ERROR, message);
 		alert.showAndWait();
 	}
 }
-
-

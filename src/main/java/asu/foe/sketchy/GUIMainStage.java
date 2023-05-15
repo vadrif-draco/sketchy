@@ -11,6 +11,11 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 
 	@Autowired
 	GUISketchScene guiSketchScene;
+	@Autowired
+	GUIRegistrationScene guiRegistrationScene;
+
+	@Autowired
+	GUILoginScene guiLoginScene;
 
 	// The following line from GUIApplication.java:
 	// "applicationContext.publishEvent(new StageReadyEvent(primaryStage));"
@@ -18,7 +23,8 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 	@Override
 	public void onApplicationEvent(StageReadyEvent event) {
 		event.getStage().setTitle("Sketchy");
-		event.getStage().setScene(guiSketchScene.getScene());
+		guiRegistrationScene.setStage(event.getStage());
+		event.getStage().setScene(guiRegistrationScene.getScene());
 		event.getStage().setMinWidth(1280);
 		event.getStage().setMinHeight(720);
 		event.getStage().show();

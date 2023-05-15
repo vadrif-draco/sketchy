@@ -1,12 +1,15 @@
 package asu.foe.sketchy;
 
 
-import org.springframework.stereotype.Component;
+import java.util.HashSet;
+import java.util.Set;
 
+import org.springframework.stereotype.Component;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 
 @Entity
 @Component
@@ -22,10 +25,24 @@ public class User {
 
     private String password;
     
-//    @OneToMany(mappedBy = "user")
-//    private List<Sketch> sketches;
 
+    
+    @ManyToMany(mappedBy = "user")
+    private Set<Sketch> sketches = new HashSet<>();
 
+    
+    
+
+    public Set<Sketch> getSketches() {
+        return sketches;
+    }
+
+    public void setSketches(Set<Sketch> sketches) {
+        this.sketches = sketches;
+    }
+    
+    
+    // getters and setters 
 	public Long getId() {
 		return id;
 	}

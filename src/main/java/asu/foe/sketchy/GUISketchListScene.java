@@ -29,11 +29,12 @@ public class GUISketchListScene {
 
 	public Parent getRoot() {
 		VBox root = new VBox(10);
-		root.setPadding(new Insets(25));
+	    root.setPadding(new Insets(25, 25, 50, 25)); // Add bottom padding of 50
 		root.setAlignment(Pos.CENTER);
+        root.setStyle("-fx-font-size: 14pt;");
 
-		// Fetch the user's sketches from the repository
-		List<Sketch> userSketches = sketchRepository.findAll(); // Fetch all sketches from the repository
+     // Fetch the user's sketches from the repository using the user ID
+        List<Sketch> userSketches = sketchRepository.findByUserId(SketchyApplication.currentUser.getId());// Replace 'userId' with the actual user ID
 
 		if (!userSketches.isEmpty()) {
 			// Display the user's sketches in a ListView
@@ -63,10 +64,20 @@ public class GUISketchListScene {
 						"description...", // Sketch description
 						SketchyApplication.currentUser // The currently logged in user
 			);
+			
+
+		    // Save the newSketch in the sketch repository
+		    sketchRepository.save(newSketch);
+
+			// set the currentSketch 
 			SketchyApplication.currentSketch = newSketch;
+			
+			// navigate to the sketch scene 
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
-		root.getChildren().add(createSketchButton);
+		 createSketchButton.setPrefWidth(200); // Set preferred width for the button
+		  createSketchButton.setPadding(new Insets(10)); // Add padding to the button
+		  root.getChildren().add(createSketchButton);
 
 		return root;
 	}

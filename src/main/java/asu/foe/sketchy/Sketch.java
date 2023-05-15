@@ -19,10 +19,14 @@ public class Sketch {
 
 
     // Add a relationship to associate a sketch with a user
+    
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    
+    // getters and setters 
 	public Long getId() {
 		return id;
 	}
@@ -63,6 +67,11 @@ public class Sketch {
 		this.title = title;
 		this.description = description;
 		this.user = user;
+	}
+
+	public Sketch() {
+		super();
+		// TODO Auto-generated constructor stub
 	}
 
     

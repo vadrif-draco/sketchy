@@ -5,21 +5,21 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GUISketchUpdateTransaction {
 
-	public enum UpdateType {
+	public enum SketchUpdateType {
 		ADD,
 		EDIT,
 		REMOVE,
 	}
 
-	private long sessionId;
+	private String sessionId;
 	private long timestamp;
 	private Pen pen;
 	private double mouseX;
 	private double mouseY;
-	private UpdateType updateType;
+	private SketchUpdateType updateType;
 
 	public GUISketchUpdateTransaction() { super(); }
-	public GUISketchUpdateTransaction(long sessionId, long timestamp, Pen pen, double mouseX, double mouseY, UpdateType updateType) {
+	public GUISketchUpdateTransaction(String sessionId, long timestamp, Pen pen, double mouseX, double mouseY, SketchUpdateType updateType) {
 		super();
 		this.sessionId = sessionId;
 		this.timestamp = timestamp;
@@ -29,8 +29,8 @@ public class GUISketchUpdateTransaction {
 		this.updateType = updateType;
 	}
 
-	public long getSessionId() { return sessionId; }
-	public void setSessionId(long sessionId) { this.sessionId = sessionId; }
+	public String getSessionId() { return sessionId; }
+	public void setSessionId(String sessionId) { this.sessionId = sessionId; }
 	public long getTimestamp() { return timestamp; }
 	public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 	public Pen getPen() { return pen; }
@@ -39,7 +39,7 @@ public class GUISketchUpdateTransaction {
 	public void setMouseX(double mouseX) { this.mouseX = mouseX; }
 	public double getMouseY() { return mouseY; }
 	public void setMouseY(double mouseY) { this.mouseY = mouseY; }
-	public UpdateType getUpdateType() { return updateType; }
-	public void setUpdateType(UpdateType updateType) { this.updateType = updateType; }
+	public SketchUpdateType getUpdateType() { return updateType; }
+	public void setUpdateType(SketchUpdateType updateType) { this.updateType = updateType; }
 
 }

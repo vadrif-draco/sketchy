@@ -1,5 +1,7 @@
 package asu.foe.sketchy;
 
+import java.util.Random;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -79,16 +81,14 @@ public class GUIRegistrationScene {
 				return;
 			}
 			// Create a new User object with the entered information
-			User user = new User(null, null, null, null);
+			User user = new User();
+			user.setId(new Random().nextLong(0, Long.MAX_VALUE));
 			user.setName(nameTextField.getText());
 			user.setEmail(emailTextField.getText());
 			user.setPassword(passwordField.getText());
 
-			// Save the User object to the database using the UserRepository
-			userRepository.save(user);
-
-			// Set the current user to this newly created user
-			SketchyApplication.currentUser = user;
+			// Save the User object to the database using the UserRepository and set it as the current user
+			SketchyApplication.currentUser = userRepository.save(user);
 
 			// Redirect to sketch list upon successful registration...
 			mainStage.scene.setRoot(sketchListScene.getRoot());

@@ -1,6 +1,7 @@
 package asu.foe.sketchy;
 
 import java.time.Instant;
+import java.util.HashMap;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
@@ -11,13 +12,13 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import asu.foe.sketchy.GUISketchUpdateTransaction.UpdateType;
+import asu.foe.sketchy.GUISketchUpdateTransaction.SketchUpdateType;
 
 @Aspect
 @Component
 public class GUISketchUpdateHandlerAspect {
 
-	private int previousNumOfShapes = 0;
+	private HashMap<String, Integer> prevNumOfShapesPerSketch = new HashMap<>();
 
 	@Lazy
 	@Autowired
@@ -42,14 +43,15 @@ public class GUISketchUpdateHandlerAspect {
 		// Prepare a new sketch update transaction to send through kafka
 		GUISketchUpdateTransaction transaction = new GUISketchUpdateTransaction();
 
-		// Set the session Id (unique per program run) for the transaction
-		transaction.setSessionId(SketchyApplication.sessionId);
+		// Get the sketch at this moment (right after the handler updated it)
+		GUISketchScene sketch = (GUISketchScene) joinPoint.getArgs()[0];
+
+		// Set the session Id (unique per sketch session) for the transaction
+		// It is necessary so that a producer session doesn't consume what it produces
+		transaction.setSessionId(sketch.sessionId);
 
 		// Set the transaction timestamp as the current epoch in milliseconds
 		transaction.setTimestamp(Instant.now().toEpochMilli());
-
-		// Get the sketch at this moment (right after the handler updated it)
-		GUISketchScene sketch = (GUISketchScene) joinPoint.getArgs()[0];
 
 		// Set the transaction's pen and mouse coordinates (which were passed as arguments to the handler)
 		transaction.setPen((Pen) joinPoint.getArgs()[1]);
@@ -57,18 +59,24 @@ public class GUISketchUpdateHandlerAspect {
 		transaction.setMouseY((double) joinPoint.getArgs()[3]);
 
 		// Extract current number of shapes in the sketch
-		int numOfShapes = sketch.shapesPane.getChildren().size();
+		Integer numOfShapes = sketch.shapesPane.getChildren().size() - sketch.numOfActiveCollaborators;
+		Integer prevNumOfShapes = prevNumOfShapesPerSketch.get(sketch.sketchId);
 
 		// According to the current number of shapes compared to the previous one, determine the type of change
-		if (numOfShapes > previousNumOfShapes) transaction.setUpdateType(UpdateType.ADD);
-		else if (numOfShapes == previousNumOfShapes) transaction.setUpdateType(UpdateType.EDIT);
-		else if (numOfShapes < previousNumOfShapes) transaction.setUpdateType(UpdateType.REMOVE);
+		if (prevNumOfShapes != null) {
+			if (numOfShapes > prevNumOfShapes) transaction.setUpdateType(SketchUpdateType.ADD);
+			else if (numOfShapes == prevNumOfShapes) transaction.setUpdateType(SketchUpdateType.EDIT);
+			else if (numOfShapes < prevNumOfShapes) transaction.setUpdateType(SketchUpdateType.REMOVE);
+		} else {
+			transaction.setUpdateType(SketchUpdateType.ADD);
+		}
 
-		// Update memory for the next comparison
-		previousNumOfShapes = numOfShapes;
+		// Update memory for the next comparison for this sketch
+		prevNumOfShapesPerSketch.put(sketch.sketchId, numOfShapes);
 
 		// Finally, send the transaction
-		guiSketchUpdateKafkaTemplate.send("sketch-updates", "", transaction);
+		String sketchId = SketchyApplication.currentSketch.getId().toString();
+		guiSketchUpdateKafkaTemplate.send("sketch-updates-" + sketchId, "transaction", transaction);
 
 	}
 

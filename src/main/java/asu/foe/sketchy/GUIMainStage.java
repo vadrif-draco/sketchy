@@ -31,6 +31,9 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 		stage.setScene(scene);
 		stage.setMinWidth(1280);
 		stage.setMinHeight(720);
+		stage.setWidth(1280);
+		stage.setHeight(720);
+		stage.centerOnScreen();
 		stage.show();
 	}
 

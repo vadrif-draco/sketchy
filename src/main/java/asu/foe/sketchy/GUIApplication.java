@@ -24,6 +24,7 @@ public class GUIApplication extends Application { // JavaFX Application
 	@Override
 	public void stop() {
 		// Since we have an init() method, we should cleanup too.
+		applicationContext.publishEvent(new ShutdownEvent(this));
 		applicationContext.close();
 		Platform.exit();
 	}
@@ -45,6 +46,11 @@ public class GUIApplication extends Application { // JavaFX Application
 		private static final long serialVersionUID = 1L;
 		public StageReadyEvent(Stage stage) { super(stage); }
 		public Stage getStage() { return ((Stage) getSource()); }
+	}
+
+	static class ShutdownEvent extends ApplicationEvent {
+		private static final long serialVersionUID = 1L;
+		public ShutdownEvent(Object source) { super(source); }
 	}
 
 }

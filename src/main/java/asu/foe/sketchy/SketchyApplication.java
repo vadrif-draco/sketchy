@@ -1,7 +1,5 @@
 package asu.foe.sketchy;
 
-import java.util.Random;
-
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
@@ -11,7 +9,6 @@ import javafx.application.Application;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class SketchyApplication {
 
-	public static long sessionId = new Random().nextLong();
 	public static User currentUser;
 	public static Sketch currentSketch;
 	public static void main(String[] args) {

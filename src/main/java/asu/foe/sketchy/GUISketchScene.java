@@ -1,18 +1,21 @@
 package asu.foe.sketchy;
 
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.PartitionOffset;
-import org.springframework.kafka.annotation.TopicPartition;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import asu.foe.sketchy.GUIApplication.ShutdownEvent;
+import asu.foe.sketchy.GUICollabUpdateTransaction.CollabUpdateType;
 import asu.foe.sketchy.Pen.DrawingMode;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -24,13 +27,17 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -40,24 +47,19 @@ import javafx.scene.paint.Color;
 import javafx.util.Duration;
 
 @Component
-public class GUISketchScene {
+public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
 	// This handler service will be "autowired", which means it will be a bean, making it visible to spring-aop
 	// This makes the aspect trigger on its method invocations
+	// This is different than the handler used by GUISketchUpdateListener
 	@Autowired
-	public GUISketchUpdateHandlerService handler;
+	private GUISketchUpdateHandlerService handler;
 
-	// This one however will be created with "new", making it invisible to the spring-aop proxy
-	// This is helpful so that the aspect doesn't trigger on the incoming changes as well as the outgoing ones
-	private GUISketchUpdateHandlerService incomingUpdatesHandler = new GUISketchUpdateHandlerService();
+	// We need the application context for dynamic creation of GUISketchUpdateListener beans per topic
+	@Autowired
+	private ApplicationContext applicationContext;
 
-	// This runnable is used to handle incoming sketch changes in parallel with normal usage of sketch
-	private abstract class GUISketchSceneRunnable implements Runnable {
-		protected GUISketchScene sketch;
-		GUISketchSceneRunnable(GUISketchScene sketch) { this.sketch = sketch; }
-	}
-
-	// To be returned to if user wants to close sketch
+	// To be returned to if user wants to close sketch and return to sketch list scene
 	// Needs to be lazily loaded because the sketch list scene also references this GUI
 	@Lazy
 	@Autowired
@@ -67,16 +69,52 @@ public class GUISketchScene {
 	@Autowired
 	private GUIMainStage mainStage;
 
+	@Lazy
+	@Autowired
+	private KafkaTemplate<String, GUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
+
+	// Flag to check whether sketch is on stage or not
+	private Boolean sketchOnStage = false;
+
+	// ID for the current sketch session; to be randomly generated on every sketch load
+	// Used to create a unique Kafka listener on every sketch load to fetch topic information
+	String sessionId;
+	String sketchId;
+
+	// Internally keeping track of number of active collaborators
+	Integer numOfActiveCollaborators = 0;
+
 	// The pen to use for drawing shapes
-	public Pen pen = new Pen();
+	public Pen pen;
 
 	// The pane to place shapes on
-	public Pane shapesPane = new Pane();
+	public Pane shapesPane;
 
 	// The pane that shows collaboration information
 	private ScrollPane collaborationPane;
 
 	public Parent getRoot() {
+
+		// Setup the session and sketch IDs
+		sessionId = UUID.randomUUID().toString();
+		sketchId = SketchyApplication.currentSketch.getId().toString();
+
+		// Create a new parameterized bean for the sketch update listener
+		applicationContext.getBean(
+					GUISketchUpdateListener.class,
+					sessionId, // Group ID; unique per sketch-session
+					"sketch-updates-" + sketchId // Topic ID for sketch updates; unique per sketch
+		);
+
+		// And another for the collab update listener
+		applicationContext.getBean(
+					GUICollabUpdateListener.class,
+					sessionId, // Group ID; also unique per sketch-session
+					"collab-updates-" + sketchId // Topic ID for collaboration updates; also unique per sketch
+		);
+
+		// Prepare the pen and the rest of the nodes in the sketch
+		pen = new Pen();
 
 		HBox headerHBox = createHeaderHBox();
 		ScrollPane drawingCanvasPane = createDrawingCanvasPane();
@@ -84,9 +122,13 @@ public class GUISketchScene {
 		HBox toolbarHBox = createToolbarHBox();
 		collaborationPane = createCollaborationPane();
 
-		return new HBox(
-					new VBox(headerHBox, drawingCanvasPane, toolbarHBox),
-					collaborationPane);
+		VBox drawingPane = new VBox(headerHBox, drawingCanvasPane, toolbarHBox);
+		HBox root = new HBox(drawingPane, collaborationPane);
+		HBox.setHgrow(drawingPane, Priority.ALWAYS);
+
+		sketchOnStage = true;
+
+		return root;
 
 	}
 
@@ -102,6 +144,27 @@ public class GUISketchScene {
 		shareBtn.setFocusTraversable(false);
 		shareBtn.setStyle("-fx-font-weight: bold;");
 		shareBtn.setGraphic(getImage("icons/share.png"));
+		shareBtn.setOnAction(e -> {
+			TextArea textArea = new TextArea(sketchId);
+			textArea.setStyle("""
+						-fx-text-fill: gray;
+						-fx-font-size: 20pt;
+						-fx-font-weight: bold;
+						""");
+			textArea.setEditable(false);
+			textArea.setPrefRowCount(1);
+			textArea.setMaxWidth(360);
+			textArea.setFocusTraversable(false);
+
+			GridPane gridPane = new GridPane();
+			gridPane.add(textArea, 0, 0);
+
+			Alert alert = new Alert(Alert.AlertType.INFORMATION);
+			alert.setTitle("Sharing your Sketch...");
+			alert.setHeaderText("Copy this ID and share it with your friends! =)");
+			alert.getDialogPane().setContent(gridPane);
+			alert.showAndWait();
+		});
 		shareBtn.setPrefHeight(40);
 
 		HBox leftHBox = new HBox(8.0);
@@ -109,24 +172,28 @@ public class GUISketchScene {
 		leftHBox.setAlignment(Pos.CENTER_LEFT);
 		leftHBox.getChildren().addAll(shareBtn, exportBtn, createSpacer());
 
-		Button collabBtn = new Button();
+		Label sketchName = new Label(SketchyApplication.currentSketch.getTitle());
+		sketchName.setStyle("-fx-font-size: 14pt; -fx-text-fill: gray; -fx-font-weight: bold;");
+
+		Button collabBtn = new Button(" Collaborate");
 		collabBtn.setFocusTraversable(false);
-		collabBtn.setStyle("-fx-font-weight: bold;");
 		collabBtn.setGraphic(getImage("icons/collab.png"));
 		collabBtn.setPrefHeight(40);
 		collabBtn.setOnAction(e -> { toggleCollaborationPane(); });
 
-		Button returnBtn = new Button();
+		Button returnBtn = new Button("Return");
 		returnBtn.setFocusTraversable(false);
-		returnBtn.setStyle("-fx-font-weight: bold;");
+		returnBtn.setStyle("-fx-text-fill: red;");
 		returnBtn.setGraphic(getImage("icons/return.png"));
 		returnBtn.setPrefHeight(40);
 		returnBtn.setOnAction(e -> {
-			Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-			alert.setTitle("Please confirm");
-			alert.setHeaderText("Are you sure you want to close this sketch?");
+			Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", ButtonType.YES, ButtonType.NO);
+			alert.setTitle("Return to Sketch List - Confirmation");
+			alert.setHeaderText("Are you sure you want to return to the sketch list?");
 			alert.setContentText("Your progress is automatically saved.");
-			if (alert.showAndWait().get().equals(ButtonType.OK)) {
+			if (alert.showAndWait().get().equals(ButtonType.YES)) {
+				cleanUp();
+				// Return to sketch list
 				mainStage.scene.setRoot(sketchListScene.getRoot());
 			}
 		});
@@ -134,10 +201,9 @@ public class GUISketchScene {
 		HBox rightHBox = new HBox(8.0);
 		rightHBox.setPadding(new Insets(8.0));
 		rightHBox.setAlignment(Pos.CENTER_RIGHT);
-		leftHBox.getChildren().addAll(collabBtn, returnBtn);
+		rightHBox.getChildren().addAll(collabBtn, returnBtn);
 
-		HBox mainHBox = new HBox(leftHBox, rightHBox);
-		HBox.setHgrow(leftHBox, Priority.ALWAYS);
+		HBox mainHBox = new HBox(leftHBox, createSpacer(), sketchName, createSpacer(), rightHBox);
 		mainHBox.setAlignment(Pos.CENTER);
 		mainHBox.setFocusTraversable(false);
 		return mainHBox;
@@ -147,6 +213,7 @@ public class GUISketchScene {
 	private ScrollPane createDrawingCanvasPane() {
 
 		ScrollPane shapesScrollPane = new ScrollPane(); // A scrolling pane for the shapes pane to scroll on
+		shapesPane = new Pane(); // Prepare a new pane for the shapes pane
 		shapesScrollPane.prefWidthProperty().bind(shapesPane.prefWidthProperty());
 		shapesScrollPane.prefHeightProperty().bind(shapesPane.prefHeightProperty());
 		shapesScrollPane.setFocusTraversable(false);
@@ -160,8 +227,12 @@ public class GUISketchScene {
 		shapesPane.setMinHeight(2000);
 		shapesPane.setFocusTraversable(false);
 		shapesPane.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> handler.handleMousePress(this, pen, e.getX(), e.getY()));
-		shapesPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> handler.handleMouseDrag(this, pen, e.getX(), e.getY()));
+		shapesPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
+			handler.handleMouseDrag(this, pen, e.getX(), e.getY());
+			moveCollabMouse(e.getX(), e.getY());
+		});
 		shapesPane.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> handler.handleMouseRelease(this, pen, e.getX(), e.getY()));
+		shapesPane.addEventHandler(MouseEvent.MOUSE_MOVED, e -> moveCollabMouse(e.getX(), e.getY()));
 		return shapesScrollPane;
 
 	}
@@ -224,9 +295,11 @@ public class GUISketchScene {
 		collaborationPane.setFocusTraversable(false);
 		collaborationPane.setPrefWidth(0);
 		collaborationPane.setMinWidth(0);
+		collaborationPane.setMaxWidth(0);
 		collaborationPane.setPrefViewportWidth(0);
 		collaborationPane.setMinViewportWidth(0);
 		collaborationPane.setFitToWidth(true);
+		collaborationPane.setHbarPolicy(ScrollBarPolicy.NEVER);
 		return collaborationPane;
 
 	}
@@ -285,64 +358,40 @@ public class GUISketchScene {
 
 	}
 
-	// TODO: @AS Use the actual sketch id from SketchyApplication.currentSketch.getId()
-	@KafkaListener(//
-				topicPartitions = { @TopicPartition( // Topic/partition information for this listener
-							topic = "sketch-updates", // The topic name
-							partitionOffsets = @PartitionOffset(partition = "0", initialOffset = "0")) }, // The partition offset (start from beginning)
-				groupId = "sketch-id", // The group ID which for our use case decides the sketch whose updates we want to listen to
-				containerFactory = "guiSketchUpdateKafkaListenerContainerFactory" // The factory for the listener
-	)
-	public void handleIncomingChanges(GUISketchUpdateTransaction transaction) {
-		if (transaction.getSessionId() != SketchyApplication.sessionId) {
-			Platform.runLater(new GUISketchSceneRunnable(this) {
-				@Override
-				public void run() {
-					switch (transaction.getUpdateType()) {
-					case ADD:
-						// All "node addition" operations are handled on the initial mouse press event
-						incomingUpdatesHandler.handleMousePress(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					case EDIT:
-						// All "node editing" operations are handled on the mouse drag event
-						incomingUpdatesHandler.handleMouseDrag(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					case REMOVE:
-						// All "node removal" operations are handled upon mouse release
-						incomingUpdatesHandler.handleMouseRelease(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					default:
-						break;
-					}
-				}
-			});
-		}
+	private void moveCollabMouse(double x, double y) {
+
+		guiCollabUpdateKafkaTemplate.send(
+					"collab-updates-" + sketchId,
+					"transaction",
+					new GUICollabUpdateTransaction(
+								sessionId,
+								SketchyApplication.currentUser.getName(),
+								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,
+								x, y, CollabUpdateType.SOMEONE_MOVED //
+					) //
+		);
+
 	}
-//	@KafkaListener(topics = "collab-updates", groupId = "sketch-id", containerFactory = "guiCollabUpdateKafkaListenerContainerFactory")
-//	public void handleCollaborationEvents(GUICollabUpdateTransaction transaction) {
-//		if (transaction.getSessionId() != SketchyApplication.sessionId) {
-//			Platform.runLater(new GUISketchSceneRunnable(this) {
-//				@Override
-//				public void run() {
-//					switch (transaction.getUpdateType()) {
-//					case ADD:
-//						// All "node addition" operations are handled on the initial mouse press event
-//						incomingUpdatesHandler.handleMousePress(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-//						break;
-//					case EDIT:
-//						// All "node editing" operations are handled on the mouse drag event
-//						incomingUpdatesHandler.handleMouseDrag(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-//						break;
-//					case REMOVE:
-//						// All "node removal" operations are handled upon mouse release
-//						incomingUpdatesHandler.handleMouseRelease(sketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-//						break;
-//					default:
-//						break;
-//					}
-//				}
-//			});
-//		}
-//	}
+
+	private void cleanUp() {
+		// Inform everyone that you're leaving
+		guiCollabUpdateKafkaTemplate.send(
+					"collab-updates-" + sketchId,
+					"transaction",
+					new GUICollabUpdateTransaction(
+								sessionId,
+								null, // Username is not important when you're leaving
+								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,
+								null, null, CollabUpdateType.SOMEONE_LEFT // You're leaving; so no mouse info.
+					)//
+		);
+		// Alright, bye
+		sketchOnStage = false;
+	}
+
+	@Override
+	public void onApplicationEvent(ShutdownEvent event) {
+		if (sketchOnStage) cleanUp();
+	}
 
 }

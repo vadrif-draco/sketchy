@@ -96,20 +96,20 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	public Parent getRoot() {
 
 		// Setup the session and sketch IDs
-		sessionId = UUID.randomUUID().toString();
+		sessionId = SketchyApplication.currentUser.getId().toString() + "-" + UUID.randomUUID().toString();
 		sketchId = SketchyApplication.currentSketch.getId().toString();
 
 		// Create a new parameterized bean for the sketch update listener
 		applicationContext.getBean(
 					GUISketchUpdateListener.class,
-					sessionId, // Group ID; unique per sketch-session
+					sessionId, // Group ID; unique per user and per sketch opened by user (the UUID part does that)
 					"sketch-updates-" + sketchId // Topic ID for sketch updates; unique per sketch
 		);
 
 		// And another for the collab update listener
 		applicationContext.getBean(
 					GUICollabUpdateListener.class,
-					sessionId, // Group ID; also unique per sketch-session
+					sessionId, // Group ID; also unique per user per sketch
 					"collab-updates-" + sketchId // Topic ID for collaboration updates; also unique per sketch
 		);
 

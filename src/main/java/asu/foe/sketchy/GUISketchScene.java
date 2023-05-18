@@ -148,7 +148,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 			TextArea textArea = new TextArea(sketchId);
 			textArea.setStyle("""
 						-fx-text-fill: gray;
-						-fx-font-size: 20pt;
+						-fx-font-size: 18pt;
 						-fx-font-weight: bold;
 						""");
 			textArea.setEditable(false);

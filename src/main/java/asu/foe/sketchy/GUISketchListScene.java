@@ -115,7 +115,7 @@ public class GUISketchListScene {
 			// Navigate to the sketch scene
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
-		createSketchButton.setPrefWidth(200); // Set preferred width for the button
+		createSketchButton.setPrefWidth(240); // Set preferred width for the button
 		createSketchButton.setPadding(new Insets(10)); // Add padding to the button
 
 		Button openSketchWithIdButton = new Button("Open Sketch with ID");
@@ -151,7 +151,7 @@ public class GUISketchListScene {
 			// navigate to the sketch scene
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
-		openSketchWithIdButton.setPrefWidth(200);
+		openSketchWithIdButton.setPrefWidth(240);
 		openSketchWithIdButton.setPadding(new Insets(10));
 
 		HBox buttonsHBox = new HBox(createSketchButton, openSketchWithIdButton);

@@ -110,7 +110,7 @@ public class GUISketchListScene {
 			Sketch newSketch = new Sketch();
 			newSketch.setId(sketchId);
 			newSketch.setTitle(result.get());
-			newSketch.setDescription("description...");
+			newSketch.setDescription("description..."); // TODO: @NY Description from GUI
 			SketchyApplication.currentSketch = sketchRepository.save(newSketch);
 
 			// And now the mapping
@@ -153,22 +153,34 @@ public class GUISketchListScene {
 				alert.showAndWait();
 				return;
 			}
-			Sketch newSketch = new Sketch();
-			newSketch.setId(Long.parseLong(resultString));
-			newSketch.setTitle("Loading..."); // Will be fetched when the user opens the sketch
-			newSketch.setDescription("Loading..."); // Will be fetched when the user opens the sketch
 
-			// Save the newSketch in the sketch repository and set it as the current sketch
-			SketchyApplication.currentSketch = sketchRepository.save(newSketch);
+			long sketchId = Long.parseLong(resultString);
 
-			// Add a mapping between the current user and this new sketch and also save it
-			UserSketchMap map = new UserSketchMap();
-			map.setId(new UserSketchMapCompositeKey());
-			map.setUser(SketchyApplication.currentUser);
-			map.setSketch(SketchyApplication.currentSketch);
-			userSketchMapRepository.save(map);
+			// Before we proceed, we need to perform some checks...
 
-			// Navigate to the sketch scene
+			// Check 1: Does the sketch already exist in the database?
+			Boolean existsInDB = sketchRepository.findById(sketchId).isPresent();
+
+			// If it doesn't, let's create a new sketch entry in this user's database
+			if (existsInDB == false) createAndSaveNewSketchEntry(sketchId);
+
+			// If it exists, we need to perform another check to find out if the current user can access this sketch
+			// Check 2: Is there a User-Sketch mapping in the database?
+			Boolean userCanAccessSketch = userSketchMapRepository.findById(
+						new UserSketchMapCompositeKey( // To search in the map, we need the composite key composed of:
+									sketchId, // ............................ 1. The sketch ID
+									SketchyApplication.currentUser.getId() // 2. The current user ID
+			)).isPresent();
+
+			// If this user has no access but the sketch already exists, then all we need is to just give them access
+			if (existsInDB == true && userCanAccessSketch == false) {
+				SketchyApplication.currentSketch = sketchRepository.findById(sketchId).get();
+				addUserSketchMapping(); // Gives them access by mapping this user to this sketch
+			}
+
+			// Otherwise, there's nothing to do, this user already has access to the sketch
+
+			// Finally, navigate to the sketch scene
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
 		openSketchWithIdButton.setPrefWidth(240);
@@ -181,6 +193,28 @@ public class GUISketchListScene {
 		root.getChildren().add(buttonsHBox);
 
 		return root;
+	}
+
+	void createAndSaveNewSketchEntry(long sketchId) {
+
+		Sketch newSketch = new Sketch();
+		newSketch.setId(sketchId);
+		// Title and descripton will be fetched when the user opens the sketch, so no need to set them
+
+		// Save the newSketch in the sketch repository and set it as the current sketch
+		SketchyApplication.currentSketch = sketchRepository.save(newSketch);
+
+		// Add a mapping between the current user and this new sketch and also save it
+		addUserSketchMapping();
+
+	}
+
+	void addUserSketchMapping() {
+		UserSketchMap map = new UserSketchMap();
+		map.setId(new UserSketchMapCompositeKey());
+		map.setUser(SketchyApplication.currentUser);
+		map.setSketch(SketchyApplication.currentSketch);
+		userSketchMapRepository.save(map);
 	}
 
 }

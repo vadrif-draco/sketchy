@@ -2,7 +2,7 @@ package asu.foe.sketchy;
 
 import javafx.scene.paint.Color;
 
-public class Pen {
+public class GUIPen {
 
 	public enum DrawingMode {
 		FREEHAND,
@@ -25,8 +25,8 @@ public class Pen {
 	private MyColor strokeColor = new MyColor(0, 0, 0);
 	private DrawingMode drawingMode = DrawingMode.FREEHAND;
 
-	public Pen() { super(); }
-	public Pen(double strokeWidth, MyColor strokeColor, DrawingMode drawingMode) {
+	public GUIPen() { super(); }
+	public GUIPen(double strokeWidth, MyColor strokeColor, DrawingMode drawingMode) {
 		super();
 		this.strokeWidth = strokeWidth;
 		this.strokeColor = strokeColor;

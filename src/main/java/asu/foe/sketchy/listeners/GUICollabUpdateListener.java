@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.listeners;
 
 import java.util.HashMap;
 
@@ -7,6 +7,9 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import asu.foe.sketchy.kafka.KafkaGUICollabUpdateTransaction;
+import asu.foe.sketchy.scenes.GUISketchScene;
+import asu.foe.sketchy.services.GUICollabUpdateHandlerService;
 import javafx.application.Platform;
 
 public class GUICollabUpdateListener {
@@ -16,7 +19,7 @@ public class GUICollabUpdateListener {
 
 	@Lazy
 	@Autowired
-	private KafkaTemplate<String, GUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
+	private KafkaTemplate<String, KafkaGUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
 
 	private HashMap<String, GUICollabUpdateHandlerService> collabUpdatesHandlerMap = new HashMap<>();
 
@@ -30,7 +33,7 @@ public class GUICollabUpdateListener {
 
 	@KafkaListener(topics = { "#{__listener.topic}" }, groupId = "#{__listener.id}", //
 				containerFactory = "guiCollabUpdateKafkaListenerContainerFactory")
-	public void handleIncomingChanges(GUICollabUpdateTransaction transaction) {
+	public void handleIncomingChanges(KafkaGUICollabUpdateTransaction transaction) {
 		if (!transaction.getSessionId().equals(currentSketch.sessionId)) {
 			Platform.runLater(new Runnable() {
 				@Override

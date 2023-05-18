@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.aspects;
 
 import java.util.HashMap;
 
@@ -11,7 +11,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import asu.foe.sketchy.GUISketchUpdateTransaction.SketchUpdateType;
+import asu.foe.sketchy.GUIPen;
+import asu.foe.sketchy.SketchyApplication;
+import asu.foe.sketchy.kafka.KafkaGUISketchUpdateTransaction;
+import asu.foe.sketchy.kafka.KafkaGUISketchUpdateTransaction.SketchUpdateType;
+import asu.foe.sketchy.scenes.GUISketchScene;
 
 @Aspect
 @Component
@@ -21,7 +25,7 @@ public class GUISketchUpdateHandlerAspect {
 
 	@Lazy
 	@Autowired
-	private KafkaTemplate<String, GUISketchUpdateTransaction> guiSketchUpdateKafkaTemplate;
+	private KafkaTemplate<String, KafkaGUISketchUpdateTransaction> guiSketchUpdateKafkaTemplate;
 
 //	// Pointcut to execute on all the methods of all classes in application
 //	@Pointcut("within(asu.foe.sketchy.*)")
@@ -33,14 +37,14 @@ public class GUISketchUpdateHandlerAspect {
 //	}
 
 	// Pointcut for GUI Sketch Scene Handler
-	@Pointcut("execution(* asu.foe.sketchy.GUISketchUpdateHandlerService.handle*(..))")
+	@Pointcut("execution(* asu.foe.sketchy.services.GUISketchUpdateHandlerService.handle*(..))")
 	public void guiSketchSceneHandlerServicePointcut() {}
 
 	@After("guiSketchSceneHandlerServicePointcut()")
 	public void adviceAfterGUISketchSceneHandlerServicePointcut(JoinPoint joinPoint) {
 
 		// Prepare a new sketch update transaction to send through kafka
-		GUISketchUpdateTransaction transaction = new GUISketchUpdateTransaction();
+		KafkaGUISketchUpdateTransaction transaction = new KafkaGUISketchUpdateTransaction();
 
 		// Get the sketch at this moment (right after the handler updated it)
 		GUISketchScene sketch = (GUISketchScene) joinPoint.getArgs()[0];
@@ -50,7 +54,7 @@ public class GUISketchUpdateHandlerAspect {
 		transaction.setSessionId(sketch.sessionId);
 
 		// Set the transaction's pen and mouse coordinates (which were passed as arguments to the handler)
-		transaction.setPen((Pen) joinPoint.getArgs()[1]);
+		transaction.setPen((GUIPen) joinPoint.getArgs()[1]);
 		transaction.setMouseX((double) joinPoint.getArgs()[2]);
 		transaction.setMouseY((double) joinPoint.getArgs()[3]);
 

@@ -3,6 +3,8 @@ package asu.foe.sketchy;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
+import asu.foe.sketchy.persistence.Sketch;
+import asu.foe.sketchy.persistence.User;
 import javafx.application.Application;
 
 @SpringBootApplication

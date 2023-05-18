@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.persistence;
 
 import org.springframework.data.repository.CrudRepository;
 

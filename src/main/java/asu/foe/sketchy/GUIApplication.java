@@ -42,13 +42,13 @@ public class GUIApplication extends Application { // JavaFX Application
 		// To organize these controls, we use "layouts" (such as arrange them in a Grid)
 	}
 
-	static class StageReadyEvent extends ApplicationEvent {
+	public static class StageReadyEvent extends ApplicationEvent {
 		private static final long serialVersionUID = 1L;
 		public StageReadyEvent(Stage stage) { super(stage); }
 		public Stage getStage() { return ((Stage) getSource()); }
 	}
 
-	static class ShutdownEvent extends ApplicationEvent {
+	public static class ShutdownEvent extends ApplicationEvent {
 		private static final long serialVersionUID = 1L;
 		public ShutdownEvent(Object source) { super(source); }
 	}

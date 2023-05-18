@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;

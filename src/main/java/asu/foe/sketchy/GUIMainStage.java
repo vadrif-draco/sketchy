@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import asu.foe.sketchy.GUIApplication.StageReadyEvent;
+import asu.foe.sketchy.scenes.GUIRegistrationScene;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 

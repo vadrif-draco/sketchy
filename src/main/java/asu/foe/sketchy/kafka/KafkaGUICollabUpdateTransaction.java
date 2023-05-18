@@ -1,6 +1,6 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.kafka;
 
-public class GUICollabUpdateTransaction {
+public class KafkaGUICollabUpdateTransaction {
 
 	public enum CollabUpdateType {
 		SOMEONE_MOVED,
@@ -14,8 +14,8 @@ public class GUICollabUpdateTransaction {
 	private Double mouseY;
 	private CollabUpdateType collabUpdateType;
 
-	public GUICollabUpdateTransaction() { super(); }
-	public GUICollabUpdateTransaction(String sessionId, String userName, String userId, Double mouseX, Double mouseY, CollabUpdateType collabUpdateType) {
+	public KafkaGUICollabUpdateTransaction() { super(); }
+	public KafkaGUICollabUpdateTransaction(String sessionId, String userName, String userId, Double mouseX, Double mouseY, CollabUpdateType collabUpdateType) {
 		super();
 		this.sessionId = sessionId;
 		this.userName = userName;

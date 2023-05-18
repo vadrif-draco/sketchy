@@ -1,12 +1,21 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.scenes;
 
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import asu.foe.sketchy.GUIMainStage;
+import asu.foe.sketchy.SketchyApplication;
+import asu.foe.sketchy.kafka.KafkaGUISketchDataTransaction;
+import asu.foe.sketchy.persistence.Sketch;
+import asu.foe.sketchy.persistence.SketchRepository;
+import asu.foe.sketchy.persistence.UserSketchMap;
+import asu.foe.sketchy.persistence.UserSketchMapCompositeKey;
+import asu.foe.sketchy.persistence.UserSketchMapRepository;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -36,6 +45,9 @@ public class GUISketchListScene {
 
 	@Autowired
 	private UserSketchMapRepository userSketchMapRepository;
+
+	@Autowired
+	private KafkaTemplate<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaTemplate;
 
 	public Parent getRoot() {
 		VBox root = new VBox(10);
@@ -112,7 +124,15 @@ public class GUISketchListScene {
 			// Save the newSketch in the sketch repository and set it as the current sketch
 			SketchyApplication.currentSketch = sketchRepository.save(newSketch);
 
-			// Navigate to the sketch scene
+			// Create a SketchDataTransaction with the data of this new sketch
+			KafkaGUISketchDataTransaction transaction = new KafkaGUISketchDataTransaction(
+						SketchyApplication.currentSketch.getTitle(),
+						SketchyApplication.currentSketch.getDescription());
+
+			// Publish an event with this transaction on the sketch data topic for this sketch (identified by its ID)
+			guiSketchDataKafkaTemplate.send("sketch-data-" + SketchyApplication.currentSketch.getId(), "transaction", transaction);
+
+			// Finally, navigate to the sketch scene
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
 		createSketchButton.setPrefWidth(240); // Set preferred width for the button
@@ -135,8 +155,8 @@ public class GUISketchListScene {
 			}
 			Sketch newSketch = new Sketch();
 			newSketch.setId(Long.parseLong(resultString));
-			newSketch.setTitle("..."); // TODO: @AS Get the title of the shared sketch
-			newSketch.setDescription("..."); // TODO: @AS Get the description of the shared sketch
+			newSketch.setTitle("Loading..."); // Will be fetched when the user opens the sketch
+			newSketch.setDescription("Loading..."); // Will be fetched when the user opens the sketch
 
 			// Save the newSketch in the sketch repository and set it as the current sketch
 			SketchyApplication.currentSketch = sketchRepository.save(newSketch);
@@ -148,7 +168,7 @@ public class GUISketchListScene {
 			map.setSketch(SketchyApplication.currentSketch);
 			userSketchMapRepository.save(map);
 
-			// navigate to the sketch scene
+			// Navigate to the sketch scene
 			mainStage.scene.setRoot(sketchScene.getRoot());
 		});
 		openSketchWithIdButton.setPrefWidth(240);

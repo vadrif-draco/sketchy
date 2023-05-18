@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.persistence;
 
 import java.util.HashSet;
 import java.util.Set;

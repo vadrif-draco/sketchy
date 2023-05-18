@@ -1,9 +1,11 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.kafka;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import asu.foe.sketchy.GUIPen;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class GUISketchUpdateTransaction {
+public class KafkaGUISketchUpdateTransaction {
 
 	public enum SketchUpdateType {
 		ADD,
@@ -12,13 +14,13 @@ public class GUISketchUpdateTransaction {
 	}
 
 	private String sessionId;
-	private Pen pen;
+	private GUIPen pen;
 	private double mouseX;
 	private double mouseY;
 	private SketchUpdateType updateType;
 
-	public GUISketchUpdateTransaction() { super(); }
-	public GUISketchUpdateTransaction(String sessionId, Pen pen, double mouseX, double mouseY, SketchUpdateType updateType) {
+	public KafkaGUISketchUpdateTransaction() { super(); }
+	public KafkaGUISketchUpdateTransaction(String sessionId, GUIPen pen, double mouseX, double mouseY, SketchUpdateType updateType) {
 		super();
 		this.sessionId = sessionId;
 		this.pen = pen;
@@ -29,8 +31,8 @@ public class GUISketchUpdateTransaction {
 
 	public String getSessionId() { return sessionId; }
 	public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-	public Pen getPen() { return pen; }
-	public void setPen(Pen pen) { this.pen = pen; }
+	public GUIPen getPen() { return pen; }
+	public void setPen(GUIPen pen) { this.pen = pen; }
 	public double getMouseX() { return mouseX; }
 	public void setMouseX(double mouseX) { this.mouseX = mouseX; }
 	public double getMouseY() { return mouseY; }

@@ -1,5 +1,6 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.scenes;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +11,18 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import asu.foe.sketchy.GUIApplication.ShutdownEvent;
-import asu.foe.sketchy.GUICollabUpdateTransaction.CollabUpdateType;
-import asu.foe.sketchy.Pen.DrawingMode;
+import asu.foe.sketchy.GUIMainStage;
+import asu.foe.sketchy.GUIPen;
+import asu.foe.sketchy.GUIPen.DrawingMode;
+import asu.foe.sketchy.SketchyApplication;
+import asu.foe.sketchy.kafka.KafkaGUICollabUpdateTransaction;
+import asu.foe.sketchy.kafka.KafkaGUICollabUpdateTransaction.CollabUpdateType;
+import asu.foe.sketchy.kafka.KafkaGUISketchDataTransaction;
+import asu.foe.sketchy.listeners.GUICollabUpdateListener;
+import asu.foe.sketchy.listeners.GUISketchDataListener;
+import asu.foe.sketchy.listeners.GUISketchUpdateListener;
+import asu.foe.sketchy.persistence.SketchRepository;
+import asu.foe.sketchy.services.GUISketchUpdateHandlerService;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -23,6 +34,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ColorPicker;
@@ -32,6 +44,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
@@ -49,51 +62,77 @@ import javafx.util.Duration;
 @Component
 public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
-	// This handler service will be "autowired", which means it will be a bean, making it visible to spring-aop
-	// This makes the aspect trigger on its method invocations
-	// This is different than the handler used by GUISketchUpdateListener
+	// Need a reference to the main stage so we can change its root in case we want to switch to another scene
 	@Autowired
-	private GUISketchUpdateHandlerService handler;
+	private GUIMainStage mainStage;
 
-	// We need the application context for dynamic creation of GUISketchUpdateListener beans per topic
-	@Autowired
-	private ApplicationContext applicationContext;
-
-	// To be returned to if user wants to close sketch and return to sketch list scene
+	// To be switched to if user wants to close sketch and return to sketch list scene
 	// Needs to be lazily loaded because the sketch list scene also references this GUI
 	@Lazy
 	@Autowired
 	private GUISketchListScene sketchListScene;
 
-	// To change the scene
+	// This handler service will be "autowired", which means it will be a bean, making it visible to spring-aop
+	// This makes the aspect trigger on its method invocations
+	// This is different than the handler used by GUISketchUpdateListener
 	@Autowired
-	private GUIMainStage mainStage;
+	private GUISketchUpdateHandlerService sketchUpdateHandler;
 
+	// We need the application context for dynamic creation of unique listener beans per sketch session
+	@Autowired
+	private ApplicationContext applicationContext;
+
+	// Needed to reflect updates (by this user or by others) to persistent sketch data
+	@Autowired
+	private SketchRepository sketchRepository;
+
+	// Needed to sync persistent sketch data across users (such as title and description)
+	@Autowired
+	private KafkaTemplate<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaTemplate;
+
+	// Needed to send collaboration update events
+	// Lazily loaded because collaboration update transactions require knowledge of the sketch scene
 	@Lazy
 	@Autowired
-	private KafkaTemplate<String, GUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
+	private KafkaTemplate<String, KafkaGUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
 
 	// Flag to check whether sketch is on stage or not
 	private Boolean sketchOnStage = false;
 
 	// ID for the current sketch session; to be randomly generated on every sketch load
 	// Used to create a unique Kafka listener on every sketch load to fetch topic information
-	String sessionId;
-	String sketchId;
+	public String sessionId;
+	public String sketchId;
 
 	// Internally keeping track of number of active collaborators
-	Integer numOfActiveCollaborators = 0;
+	public Integer numOfActiveCollaborators = 0;
+
+	// The main widgets of the sketch:
+	private HBox headerHBox;
+	private ScrollPane drawingCanvasPane;
+	private HBox toolbarHBox;
+	private VBox drawingPane;
+	private ScrollPane collaborationPane;
 
 	// The pen to use for drawing shapes
-	public Pen pen;
+	public GUIPen pen;
 
 	// The pane to place shapes on
 	public Pane shapesPane;
 
-	// The pane that shows collaboration information
-	private ScrollPane collaborationPane;
-
 	public Parent getRoot() {
+
+		// Prepare the pen and the rest of the nodes in the sketch
+		pen = new GUIPen();
+
+		headerHBox = createHeaderHBox();
+		drawingCanvasPane = createDrawingCanvasPane();
+		VBox.setVgrow(drawingCanvasPane, Priority.ALWAYS);
+		toolbarHBox = createToolbarHBox();
+		collaborationPane = createCollaborationPane();
+
+		drawingPane = new VBox(headerHBox, drawingCanvasPane, toolbarHBox);
+		HBox.setHgrow(drawingPane, Priority.ALWAYS);
 
 		// Setup the session and sketch IDs
 		sessionId = SketchyApplication.currentUser.getId().toString() + "-" + UUID.randomUUID().toString();
@@ -101,34 +140,21 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
 		// Create a new parameterized bean for the sketch update listener
 		applicationContext.getBean(
-					GUISketchUpdateListener.class,
+					GUISketchUpdateListener.class, // The Class of the listener which we want to create a Bean of
 					sessionId, // Group ID; unique per user and per sketch opened by user (the UUID part does that)
 					"sketch-updates-" + sketchId // Topic ID for sketch updates; unique per sketch
 		);
 
 		// And another for the collab update listener
-		applicationContext.getBean(
-					GUICollabUpdateListener.class,
-					sessionId, // Group ID; also unique per user per sketch
-					"collab-updates-" + sketchId // Topic ID for collaboration updates; also unique per sketch
-		);
+		applicationContext.getBean(GUICollabUpdateListener.class, sessionId, "collab-updates-" + sketchId);
 
-		// Prepare the pen and the rest of the nodes in the sketch
-		pen = new Pen();
+		// And another for the sketch data listener
+		applicationContext.getBean(GUISketchDataListener.class, sessionId, "sketch-data-" + sketchId);
 
-		HBox headerHBox = createHeaderHBox();
-		ScrollPane drawingCanvasPane = createDrawingCanvasPane();
-		VBox.setVgrow(drawingCanvasPane, Priority.ALWAYS);
-		HBox toolbarHBox = createToolbarHBox();
-		collaborationPane = createCollaborationPane();
-
-		VBox drawingPane = new VBox(headerHBox, drawingCanvasPane, toolbarHBox);
-		HBox root = new HBox(drawingPane, collaborationPane);
-		HBox.setHgrow(drawingPane, Priority.ALWAYS);
-
+		// Mark the sketch as displayed on stage (need this flag so I can perform cleanup if the stage is closed abruptly)
 		sketchOnStage = true;
 
-		return root;
+		return new HBox(drawingPane, collaborationPane);
 
 	}
 
@@ -172,8 +198,21 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		leftHBox.setAlignment(Pos.CENTER_LEFT);
 		leftHBox.getChildren().addAll(shareBtn, exportBtn, createSpacer());
 
-		Label sketchName = new Label(SketchyApplication.currentSketch.getTitle());
-		sketchName.setStyle("-fx-font-size: 14pt; -fx-text-fill: gray; -fx-font-weight: bold;");
+		HBox sketchTitleArea = new HBox(8.0);
+		sketchTitleArea.setPadding(new Insets(8.0));
+		sketchTitleArea.setAlignment(Pos.CENTER);
+
+		Label sketchTitle = new Label(SketchyApplication.currentSketch.getTitle());
+		sketchTitle.setStyle("-fx-font-size: 16pt; -fx-font-weight: bold;");
+		sketchTitle.setOpacity(0.65);
+		sketchTitle.setId("sketchTitle");
+
+		Button sketchTitleEditBtn = new Button();
+		sketchTitleEditBtn.setGraphic(getImage("icons/edit.png", 28, 0.5));
+		sketchTitleEditBtn.setFocusTraversable(false);
+		sketchTitleEditBtn.setOnAction(e -> { showUpdateSketchTitleDialog(); });
+
+		sketchTitleArea.getChildren().addAll(sketchTitle, sketchTitleEditBtn);
 
 		Button collabBtn = new Button(" Collaborate");
 		collabBtn.setFocusTraversable(false);
@@ -203,7 +242,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		rightHBox.setAlignment(Pos.CENTER_RIGHT);
 		rightHBox.getChildren().addAll(collabBtn, returnBtn);
 
-		HBox mainHBox = new HBox(leftHBox, createSpacer(), sketchName, createSpacer(), rightHBox);
+		HBox mainHBox = new HBox(leftHBox, createSpacer(), sketchTitleArea, createSpacer(), rightHBox);
 		mainHBox.setAlignment(Pos.CENTER);
 		mainHBox.setFocusTraversable(false);
 		return mainHBox;
@@ -226,12 +265,12 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		shapesPane.setMinWidth(2000);
 		shapesPane.setMinHeight(2000);
 		shapesPane.setFocusTraversable(false);
-		shapesPane.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> handler.handleMousePress(this, pen, e.getX(), e.getY()));
+		shapesPane.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> sketchUpdateHandler.handleMousePress(this, pen, e.getX(), e.getY()));
 		shapesPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
-			handler.handleMouseDrag(this, pen, e.getX(), e.getY());
+			sketchUpdateHandler.handleMouseDrag(this, pen, e.getX(), e.getY());
 			moveCollabMouse(e.getX(), e.getY());
 		});
-		shapesPane.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> handler.handleMouseRelease(this, pen, e.getX(), e.getY()));
+		shapesPane.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> sketchUpdateHandler.handleMouseRelease(this, pen, e.getX(), e.getY()));
 		shapesPane.addEventHandler(MouseEvent.MOUSE_MOVED, e -> moveCollabMouse(e.getX(), e.getY()));
 		return shapesScrollPane;
 
@@ -363,7 +402,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		guiCollabUpdateKafkaTemplate.send(
 					"collab-updates-" + sketchId,
 					"transaction",
-					new GUICollabUpdateTransaction(
+					new KafkaGUICollabUpdateTransaction(
 								sessionId,
 								SketchyApplication.currentUser.getName(),
 								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,
@@ -373,12 +412,44 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
 	}
 
+	private void showUpdateSketchTitleDialog() {
+		TextInputDialog dialog = new TextInputDialog();
+		dialog.setTitle("Renaming your Sketch...");
+		dialog.setHeaderText("Please enter a new name for your Sketch:");
+		dialog.setContentText("Name:");
+		Optional<String> result = dialog.showAndWait();
+		if (result.isEmpty()) return; // Empty means "cancel" was pressed
+		if (result.get().length() < 1) {
+			Alert alert = new Alert(AlertType.ERROR, "Please enter a valid sketch name!");
+			alert.showAndWait();
+			return;
+		}
+		String newTitle = result.get();
+		// Propagate data changes to peers
+		guiSketchDataKafkaTemplate.send(
+					"sketch-data-" + sketchId, "transaction",
+					new KafkaGUISketchDataTransaction(newTitle, null) //
+		);
+		// Persist and reflect data changes
+		updateSketchData(newTitle, null);
+	}
+
+	public void updateSketchData(String newTitle, String newDesc) {
+		// Update data (whatever exists from it)
+		if (newTitle != null) SketchyApplication.currentSketch.setTitle(newTitle);
+		if (newDesc != null) SketchyApplication.currentSketch.setDescription(newDesc);
+		// Persist the changes
+		SketchyApplication.currentSketch = sketchRepository.save(SketchyApplication.currentSketch);
+		// Reflect the changes
+		((Label) headerHBox.lookup("#sketchTitle")).setText(SketchyApplication.currentSketch.getTitle());
+	}
+
 	private void cleanUp() {
 		// Inform everyone that you're leaving
 		guiCollabUpdateKafkaTemplate.send(
 					"collab-updates-" + sketchId,
 					"transaction",
-					new GUICollabUpdateTransaction(
+					new KafkaGUICollabUpdateTransaction(
 								sessionId,
 								null, // Username is not important when you're leaving
 								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,

@@ -1,4 +1,4 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.kafka;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
 @Configuration
@@ -30,8 +29,7 @@ public class KafkaGUIUpdateProducerConfig {
 	@Value(value = "${spring.kafka.properties.sasl.jaas.config:}")
 	private String jaasConfig = null;
 
-	@Bean
-	ProducerFactory<String, GUISketchUpdateTransaction> guiSketchUpdateProducerFactory() {
+	Map<String, Object> getCommonConfigProps() {
 		Map<String, Object> configProps = new HashMap<>();
 		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
 		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -42,31 +40,22 @@ public class KafkaGUIUpdateProducerConfig {
 			configProps.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
 			configProps.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);
 		}
-		return new DefaultKafkaProducerFactory<>(configProps);
+		return configProps;
 	}
 
 	@Bean
-	KafkaTemplate<String, GUISketchUpdateTransaction> guiSketchUpdateKafkaTemplate() {
-		return new KafkaTemplate<>(guiSketchUpdateProducerFactory());
+	KafkaTemplate<String, KafkaGUISketchUpdateTransaction> guiSketchUpdateKafkaTemplate() {
+		return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(getCommonConfigProps()));
 	}
 
 	@Bean
-	ProducerFactory<String, GUICollabUpdateTransaction> guiCollabUpdateProducerFactory() {
-		Map<String, Object> configProps = new HashMap<>();
-		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
-		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-		configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-		// Security! (if exists)
-		if (!securityProtocol.equals("")) {
-			configProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
-			configProps.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
-			configProps.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);
-		}
-		return new DefaultKafkaProducerFactory<>(configProps);
+	KafkaTemplate<String, KafkaGUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate() {
+		return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(getCommonConfigProps()));
 	}
 
 	@Bean
-	KafkaTemplate<String, GUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate() {
-		return new KafkaTemplate<>(guiCollabUpdateProducerFactory());
+	KafkaTemplate<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaTemplate() {
+		return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(getCommonConfigProps()));
 	}
+
 }

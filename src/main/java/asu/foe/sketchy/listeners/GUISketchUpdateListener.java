@@ -1,10 +1,13 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.listeners;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.PartitionOffset;
 import org.springframework.kafka.annotation.TopicPartition;
 
+import asu.foe.sketchy.kafka.KafkaGUISketchUpdateTransaction;
+import asu.foe.sketchy.scenes.GUISketchScene;
+import asu.foe.sketchy.services.GUISketchUpdateHandlerService;
 import javafx.application.Platform;
 
 public class GUISketchUpdateListener {
@@ -36,7 +39,7 @@ public class GUISketchUpdateListener {
 				containerFactory = "guiSketchUpdateKafkaListenerContainerFactory",
 				// The group ID for this listener (unique per listener... each group has one listener)
 				groupId = "#{__listener.id}")
-	public void handleIncomingChanges(GUISketchUpdateTransaction transaction) {
+	public void handleIncomingChanges(KafkaGUISketchUpdateTransaction transaction) {
 		if (!transaction.getSessionId().equals(currentSketch.sessionId)) {
 			// This runnable is used to handle incoming sketch changes in parallel without interrupting the normal usage of the sketch
 			Platform.runLater(new Runnable() {

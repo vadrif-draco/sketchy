@@ -1,7 +1,9 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.services;
 
 import org.springframework.stereotype.Component;
 
+import asu.foe.sketchy.GUIPen;
+import asu.foe.sketchy.scenes.GUISketchScene;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.SnapshotParameters;
@@ -35,7 +37,7 @@ public class GUISketchUpdateHandlerService {
 	// For ERASER mode
 	private Node nodeToErase;
 
-	void handleMousePress(GUISketchScene sketch, Pen pen, double x, double y) {
+	public void handleMousePress(GUISketchScene sketch, GUIPen pen, double x, double y) {
 		switch (pen.getDrawingMode()) {
 		case FREEHAND:
 			currentPolyline = new Polyline();
@@ -96,7 +98,7 @@ public class GUISketchUpdateHandlerService {
 		}
 	}
 
-	void handleMouseDrag(GUISketchScene sketch, Pen pen, double x, double y) {
+	public void handleMouseDrag(GUISketchScene sketch, GUIPen pen, double x, double y) {
 		switch (pen.getDrawingMode()) {
 		case FREEHAND:
 			currentPolyline.getPoints().addAll(new Double[] { x, y });
@@ -144,7 +146,7 @@ public class GUISketchUpdateHandlerService {
 		}
 	}
 
-	void handleMouseRelease(GUISketchScene sketch, Pen pen, double x, double y) {
+	public void handleMouseRelease(GUISketchScene sketch, GUIPen pen, double x, double y) {
 		switch (pen.getDrawingMode()) {
 		case ERASER:
 			sketch.shapesPane.getChildren().remove(nodeToErase);

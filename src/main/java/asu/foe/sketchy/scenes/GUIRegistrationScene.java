@@ -1,10 +1,14 @@
-package asu.foe.sketchy;
+package asu.foe.sketchy.scenes;
 
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import asu.foe.sketchy.GUIMainStage;
+import asu.foe.sketchy.SketchyApplication;
+import asu.foe.sketchy.persistence.User;
+import asu.foe.sketchy.persistence.UserRepository;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;

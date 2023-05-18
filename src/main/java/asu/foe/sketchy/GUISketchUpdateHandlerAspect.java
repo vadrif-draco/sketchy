@@ -1,6 +1,5 @@
 package asu.foe.sketchy;
 
-import java.time.Instant;
 import java.util.HashMap;
 
 import org.aspectj.lang.JoinPoint;
@@ -49,9 +48,6 @@ public class GUISketchUpdateHandlerAspect {
 		// Set the session Id (unique per sketch session) for the transaction
 		// It is necessary so that a producer session doesn't consume what it produces
 		transaction.setSessionId(sketch.sessionId);
-
-		// Set the transaction timestamp as the current epoch in milliseconds
-		transaction.setTimestamp(Instant.now().toEpochMilli());
 
 		// Set the transaction's pen and mouse coordinates (which were passed as arguments to the handler)
 		transaction.setPen((Pen) joinPoint.getArgs()[1]);

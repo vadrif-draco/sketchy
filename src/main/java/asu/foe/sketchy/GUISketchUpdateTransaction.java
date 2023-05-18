@@ -12,17 +12,15 @@ public class GUISketchUpdateTransaction {
 	}
 
 	private String sessionId;
-	private long timestamp;
 	private Pen pen;
 	private double mouseX;
 	private double mouseY;
 	private SketchUpdateType updateType;
 
 	public GUISketchUpdateTransaction() { super(); }
-	public GUISketchUpdateTransaction(String sessionId, long timestamp, Pen pen, double mouseX, double mouseY, SketchUpdateType updateType) {
+	public GUISketchUpdateTransaction(String sessionId, Pen pen, double mouseX, double mouseY, SketchUpdateType updateType) {
 		super();
 		this.sessionId = sessionId;
-		this.timestamp = timestamp;
 		this.pen = pen;
 		this.mouseX = mouseX;
 		this.mouseY = mouseY;
@@ -31,8 +29,6 @@ public class GUISketchUpdateTransaction {
 
 	public String getSessionId() { return sessionId; }
 	public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-	public long getTimestamp() { return timestamp; }
-	public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 	public Pen getPen() { return pen; }
 	public void setPen(Pen pen) { this.pen = pen; }
 	public double getMouseX() { return mouseX; }

@@ -1,5 +1,7 @@
 package asu.foe.sketchy.scenes;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,9 +20,11 @@ import asu.foe.sketchy.SketchyApplication;
 import asu.foe.sketchy.kafka.KafkaGUICollabUpdateTransaction;
 import asu.foe.sketchy.kafka.KafkaGUICollabUpdateTransaction.CollabUpdateType;
 import asu.foe.sketchy.kafka.KafkaGUISketchDataTransaction;
+import asu.foe.sketchy.kafka.KafkaLoggingTransaction;
 import asu.foe.sketchy.listeners.GUICollabUpdateListener;
 import asu.foe.sketchy.listeners.GUISketchDataListener;
 import asu.foe.sketchy.listeners.GUISketchUpdateListener;
+import asu.foe.sketchy.listeners.LoggingListener;
 import asu.foe.sketchy.services.GUISketchDataHandlerService;
 import asu.foe.sketchy.services.GUISketchUpdateHandlerService;
 import javafx.animation.Interpolator;
@@ -96,6 +100,10 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	@Autowired
 	private KafkaTemplate<String, KafkaGUICollabUpdateTransaction> guiCollabUpdateKafkaTemplate;
 
+	// Needed to send sketch closing log
+	@Autowired
+	private KafkaTemplate<String, KafkaLoggingTransaction> loggingKafkaTemplate;
+
 	// Flag to check whether sketch is on stage or not
 	private Boolean sketchOnStage = false;
 
@@ -113,6 +121,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	private HBox toolbarHBox;
 	private VBox drawingPane;
 	private ScrollPane collaborationPane;
+	private VBox collaborationPaneContents;
 
 	// The pen to use for drawing shapes
 	private GUIPen pen;
@@ -129,7 +138,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		drawingCanvasPane = createDrawingCanvasPane();
 		VBox.setVgrow(drawingCanvasPane, Priority.ALWAYS);
 		toolbarHBox = createToolbarHBox();
-		collaborationPane = createCollaborationPane();
+		setCollaborationPane(createCollaborationPane());
 
 		drawingPane = new VBox(getHeaderHBox(), drawingCanvasPane, toolbarHBox);
 		HBox.setHgrow(drawingPane, Priority.ALWAYS);
@@ -150,10 +159,13 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		// And another for the sketch data listener
 		applicationContext.getBean(GUISketchDataListener.class, getSessionId(), "sketch-data-" + getSketchId());
 
+		// And another for logging updates
+		applicationContext.getBean(LoggingListener.class, getSessionId(), "sketch-log-" + getSketchId());
+
 		// Mark the sketch as displayed on stage (need this flag so I can perform cleanup if the stage is closed abruptly)
 		sketchOnStage = true;
 
-		return new HBox(drawingPane, collaborationPane);
+		return new HBox(drawingPane, getCollaborationPane());
 
 	}
 
@@ -329,6 +341,8 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	private ScrollPane createCollaborationPane() {
 
 		ScrollPane collaborationPane = new ScrollPane();
+		setCollaborationPaneContents(new VBox(16));
+		collaborationPane.setContent(getCollaborationPaneContents());
 		collaborationPane.setStyle("-fx-border-style: hidden;");
 		collaborationPane.setFocusTraversable(false);
 		collaborationPane.setPrefWidth(0);
@@ -338,6 +352,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		collaborationPane.setMinViewportWidth(0);
 		collaborationPane.setFitToWidth(true);
 		collaborationPane.setHbarPolicy(ScrollBarPolicy.NEVER);
+		collaborationPane.setVbarPolicy(ScrollBarPolicy.NEVER);
 		return collaborationPane;
 
 	}
@@ -381,15 +396,17 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
 		Double newMinWidth;
 		Interpolator interpolator;
-		if (collaborationPane.getMinWidth() == 0) {
+		if (getCollaborationPane().getMinWidth() == 0) {
 			newMinWidth = 360.0;
 			interpolator = Interpolator.EASE_IN;
+			getCollaborationPane().setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
 		} else {
 			newMinWidth = 0.0;
 			interpolator = Interpolator.EASE_OUT;
+			getCollaborationPane().setVbarPolicy(ScrollBarPolicy.NEVER);
 		}
 		Timeline timeline = new Timeline();
-		KeyValue keyValue = new KeyValue(collaborationPane.minWidthProperty(), newMinWidth, interpolator);
+		KeyValue keyValue = new KeyValue(getCollaborationPane().minWidthProperty(), newMinWidth, interpolator);
 		KeyFrame keyFrame = new KeyFrame(Duration.millis(250), keyValue);
 		timeline.getKeyFrames().add(keyFrame);
 		timeline.play();
@@ -446,6 +463,15 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 								null, null, CollabUpdateType.SOMEONE_LEFT // You're leaving; so no mouse info.
 					)//
 		);
+		// And log it
+		LocalDateTime now = LocalDateTime.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		String formattedDateTime = now.format(formatter);
+		String userName = SketchyApplication.getCurrentUser().getName();
+		KafkaLoggingTransaction transaction = new KafkaLoggingTransaction();
+		transaction.setMessage(userName + " closed the sketch at: " + formattedDateTime);
+		String sketchId = SketchyApplication.getCurrentSketch().getId().toString();
+		loggingKafkaTemplate.send("sketch-log-" + sketchId, "transaction", transaction);
 		// Alright, bye
 		sketchOnStage = false;
 	}
@@ -465,5 +491,9 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	public void setSketchId(String sketchId) { this.sketchId = sketchId; }
 	public HBox getHeaderHBox() { return headerHBox; }
 	public void setHeaderHBox(HBox headerHBox) { this.headerHBox = headerHBox; }
+	public ScrollPane getCollaborationPane() { return collaborationPane; }
+	public void setCollaborationPane(ScrollPane collaborationPane) { this.collaborationPane = collaborationPane; }
+	public VBox getCollaborationPaneContents() { return collaborationPaneContents; }
+	public void setCollaborationPaneContents(VBox collaborationPaneContents) { this.collaborationPaneContents = collaborationPaneContents; }
 
 }

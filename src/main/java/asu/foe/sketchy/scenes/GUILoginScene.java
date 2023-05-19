@@ -75,14 +75,14 @@ public class GUILoginScene {
 			}
 
 			// Set the current user to this user
-			SketchyApplication.currentUser = user;
+			SketchyApplication.setCurrentUser(user);
 
 			// Show a success message or redirect to another page.
 			Alert alert = new Alert(Alert.AlertType.INFORMATION, "Logged in successfully!");
 			alert.showAndWait();
 
 			// Redirect to the GUISketchList
-			mainStage.scene.setRoot(sketchListScene.getRoot());
+			mainStage.getScene().setRoot(sketchListScene.getRoot());
 		});
 
 		// Create an HBox to hold the "Login"

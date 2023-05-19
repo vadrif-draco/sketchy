@@ -11,11 +11,15 @@ import javafx.application.Application;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class SketchyApplication {
 
-	public static User currentUser;
-	public static Sketch currentSketch;
+	private static User currentUser;
+	private static Sketch currentSketch;
 	public static void main(String[] args) {
 		// To launch a JavaFX application, you have to use the Application.launch method
 		Application.launch(GUIApplication.class, args);
 	}
+	public static Sketch getCurrentSketch() { return currentSketch; }
+	public static void setCurrentSketch(Sketch currentSketch) { SketchyApplication.currentSketch = currentSketch; }
+	public static User getCurrentUser() { return currentUser; }
+	public static void setCurrentUser(User currentUser) { SketchyApplication.currentUser = currentUser; }
 
 }

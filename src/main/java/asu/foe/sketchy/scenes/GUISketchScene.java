@@ -21,7 +21,7 @@ import asu.foe.sketchy.kafka.KafkaGUISketchDataTransaction;
 import asu.foe.sketchy.listeners.GUICollabUpdateListener;
 import asu.foe.sketchy.listeners.GUISketchDataListener;
 import asu.foe.sketchy.listeners.GUISketchUpdateListener;
-import asu.foe.sketchy.persistence.SketchRepository;
+import asu.foe.sketchy.services.GUISketchDataHandlerService;
 import asu.foe.sketchy.services.GUISketchUpdateHandlerService;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -78,15 +78,15 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	@Autowired
 	private GUISketchUpdateHandlerService sketchUpdateHandler;
 
+	// This handler service is responsible for updating sketch data (such as title and description)
+	@Autowired
+	private GUISketchDataHandlerService sketchDataHandler;
+
 	// We need the application context for dynamic creation of unique listener beans per sketch session
 	@Autowired
 	private ApplicationContext applicationContext;
 
-	// Needed to reflect updates (by this user or by others) to persistent sketch data
-	@Autowired
-	private SketchRepository sketchRepository;
-
-	// Needed to sync persistent sketch data across users (such as title and description)
+	// Needed to sync persistent sketch data across users
 	@Autowired
 	private KafkaTemplate<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaTemplate;
 
@@ -101,11 +101,11 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 
 	// ID for the current sketch session; to be randomly generated on every sketch load
 	// Used to create a unique Kafka listener on every sketch load to fetch topic information
-	public String sessionId;
-	public String sketchId;
+	private String sessionId;
+	private String sketchId;
 
 	// Internally keeping track of number of active collaborators
-	public Integer numOfActiveCollaborators = 0;
+	private Integer numOfActiveCollaborators = 0;
 
 	// The main widgets of the sketch:
 	private HBox headerHBox;
@@ -115,41 +115,40 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	private ScrollPane collaborationPane;
 
 	// The pen to use for drawing shapes
-	public GUIPen pen;
+	private GUIPen pen;
 
 	// The pane to place shapes on
-	public Pane shapesPane;
+	private Pane shapesPane;
 
 	public Parent getRoot() {
 
 		// Prepare the pen and the rest of the nodes in the sketch
 		pen = new GUIPen();
 
-		headerHBox = createHeaderHBox();
+		setHeaderHBox(createHeaderHBox());
 		drawingCanvasPane = createDrawingCanvasPane();
 		VBox.setVgrow(drawingCanvasPane, Priority.ALWAYS);
 		toolbarHBox = createToolbarHBox();
 		collaborationPane = createCollaborationPane();
 
-		drawingPane = new VBox(headerHBox, drawingCanvasPane, toolbarHBox);
+		drawingPane = new VBox(getHeaderHBox(), drawingCanvasPane, toolbarHBox);
 		HBox.setHgrow(drawingPane, Priority.ALWAYS);
 
 		// Setup the session and sketch IDs
-		sessionId = SketchyApplication.currentUser.getId().toString() + "-" + UUID.randomUUID().toString();
-		sketchId = SketchyApplication.currentSketch.getId().toString();
+		setSessionId(SketchyApplication.getCurrentUser().getId().toString() + "-" + UUID.randomUUID().toString());
+		setSketchId(SketchyApplication.getCurrentSketch().getId().toString());
 
 		// Create a new parameterized bean for the sketch update listener
 		applicationContext.getBean(
 					GUISketchUpdateListener.class, // The Class of the listener which we want to create a Bean of
-					sessionId, // Group ID; unique per user and per sketch opened by user (the UUID part does that)
-					"sketch-updates-" + sketchId // Topic ID for sketch updates; unique per sketch
-		);
+					getSessionId(), // Group ID; unique per user and per sketch opened by user (the UUID part does that)
+					"sketch-updates-" + getSketchId());
 
 		// And another for the collab update listener
-		applicationContext.getBean(GUICollabUpdateListener.class, sessionId, "collab-updates-" + sketchId);
+		applicationContext.getBean(GUICollabUpdateListener.class, getSessionId(), "collab-updates-" + getSketchId());
 
 		// And another for the sketch data listener
-		applicationContext.getBean(GUISketchDataListener.class, sessionId, "sketch-data-" + sketchId);
+		applicationContext.getBean(GUISketchDataListener.class, getSessionId(), "sketch-data-" + getSketchId());
 
 		// Mark the sketch as displayed on stage (need this flag so I can perform cleanup if the stage is closed abruptly)
 		sketchOnStage = true;
@@ -171,7 +170,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		shareBtn.setStyle("-fx-font-weight: bold;");
 		shareBtn.setGraphic(getImage("icons/share.png"));
 		shareBtn.setOnAction(e -> {
-			TextArea textArea = new TextArea(sketchId);
+			TextArea textArea = new TextArea(getSketchId());
 			textArea.setStyle("""
 						-fx-text-fill: gray;
 						-fx-font-size: 18pt;
@@ -202,7 +201,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		sketchTitleArea.setPadding(new Insets(8.0));
 		sketchTitleArea.setAlignment(Pos.CENTER);
 
-		Label sketchTitle = new Label(SketchyApplication.currentSketch.getTitle());
+		Label sketchTitle = new Label(SketchyApplication.getCurrentSketch().getTitle());
 		sketchTitle.setStyle("-fx-font-size: 16pt; -fx-font-weight: bold;");
 		sketchTitle.setOpacity(0.65);
 		sketchTitle.setId("sketchTitle");
@@ -233,7 +232,7 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 			if (alert.showAndWait().get().equals(ButtonType.YES)) {
 				cleanUp();
 				// Return to sketch list
-				mainStage.scene.setRoot(sketchListScene.getRoot());
+				mainStage.getScene().setRoot(sketchListScene.getRoot());
 			}
 		});
 
@@ -252,26 +251,26 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	private ScrollPane createDrawingCanvasPane() {
 
 		ScrollPane shapesScrollPane = new ScrollPane(); // A scrolling pane for the shapes pane to scroll on
-		shapesPane = new Pane(); // Prepare a new pane for the shapes pane
-		shapesScrollPane.prefWidthProperty().bind(shapesPane.prefWidthProperty());
-		shapesScrollPane.prefHeightProperty().bind(shapesPane.prefHeightProperty());
+		setShapesPane(new Pane()); // Prepare a new pane for the shapes pane
+		shapesScrollPane.prefWidthProperty().bind(getShapesPane().prefWidthProperty());
+		shapesScrollPane.prefHeightProperty().bind(getShapesPane().prefHeightProperty());
 		shapesScrollPane.setFocusTraversable(false);
 		shapesScrollPane.setStyle("""
 					-fx-border-style: solid hidden solid hidden;
 					-fx-border-color: gray;
 					-fx-background: white;
 					""");
-		shapesScrollPane.setContent(shapesPane);
-		shapesPane.setMinWidth(2000);
-		shapesPane.setMinHeight(2000);
-		shapesPane.setFocusTraversable(false);
-		shapesPane.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> sketchUpdateHandler.handleMousePress(this, pen, e.getX(), e.getY()));
-		shapesPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
+		shapesScrollPane.setContent(getShapesPane());
+		getShapesPane().setMinWidth(2000);
+		getShapesPane().setMinHeight(2000);
+		getShapesPane().setFocusTraversable(false);
+		getShapesPane().addEventHandler(MouseEvent.MOUSE_PRESSED, e -> sketchUpdateHandler.handleMousePress(this, pen, e.getX(), e.getY()));
+		getShapesPane().addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
 			sketchUpdateHandler.handleMouseDrag(this, pen, e.getX(), e.getY());
 			moveCollabMouse(e.getX(), e.getY());
 		});
-		shapesPane.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> sketchUpdateHandler.handleMouseRelease(this, pen, e.getX(), e.getY()));
-		shapesPane.addEventHandler(MouseEvent.MOUSE_MOVED, e -> moveCollabMouse(e.getX(), e.getY()));
+		getShapesPane().addEventHandler(MouseEvent.MOUSE_RELEASED, e -> sketchUpdateHandler.handleMouseRelease(this, pen, e.getX(), e.getY()));
+		getShapesPane().addEventHandler(MouseEvent.MOUSE_MOVED, e -> moveCollabMouse(e.getX(), e.getY()));
 		return shapesScrollPane;
 
 	}
@@ -400,12 +399,12 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	private void moveCollabMouse(double x, double y) {
 
 		guiCollabUpdateKafkaTemplate.send(
-					"collab-updates-" + sketchId,
+					"collab-updates-" + getSketchId(),
 					"transaction",
 					new KafkaGUICollabUpdateTransaction(
-								sessionId,
-								SketchyApplication.currentUser.getName(),
-								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,
+								getSessionId(),
+								SketchyApplication.getCurrentUser().getName(),
+								SketchyApplication.getCurrentUser().getId().toString() + '-' + getSessionId(),
 								x, y, CollabUpdateType.SOMEONE_MOVED //
 					) //
 		);
@@ -427,32 +426,23 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 		String newTitle = result.get();
 		// Propagate data changes to peers
 		guiSketchDataKafkaTemplate.send(
-					"sketch-data-" + sketchId, "transaction",
+					"sketch-data-" + getSketchId(), "transaction",
 					new KafkaGUISketchDataTransaction(newTitle, null) //
 		);
 		// Persist and reflect data changes
-		updateSketchData(newTitle, null);
-	}
-
-	public void updateSketchData(String newTitle, String newDesc) {
-		// Update data (whatever exists from it)
-		if (newTitle != null) SketchyApplication.currentSketch.setTitle(newTitle);
-		if (newDesc != null) SketchyApplication.currentSketch.setDescription(newDesc);
-		// Persist the changes
-		SketchyApplication.currentSketch = sketchRepository.save(SketchyApplication.currentSketch);
-		// Reflect the changes
-		((Label) headerHBox.lookup("#sketchTitle")).setText(SketchyApplication.currentSketch.getTitle());
+		// The flag "internal" is necessary to differentiate between self-update vs. sync-update
+		sketchDataHandler.updateSketchData(newTitle, null, true);
 	}
 
 	private void cleanUp() {
 		// Inform everyone that you're leaving
 		guiCollabUpdateKafkaTemplate.send(
-					"collab-updates-" + sketchId,
+					"collab-updates-" + getSketchId(),
 					"transaction",
 					new KafkaGUICollabUpdateTransaction(
-								sessionId,
+								getSessionId(),
 								null, // Username is not important when you're leaving
-								SketchyApplication.currentUser.getId().toString() + '-' + sessionId,
+								SketchyApplication.getCurrentUser().getId().toString() + '-' + getSessionId(),
 								null, null, CollabUpdateType.SOMEONE_LEFT // You're leaving; so no mouse info.
 					)//
 		);
@@ -464,5 +454,16 @@ public class GUISketchScene implements ApplicationListener<ShutdownEvent> {
 	public void onApplicationEvent(ShutdownEvent event) {
 		if (sketchOnStage) cleanUp();
 	}
+
+	public String getSessionId() { return sessionId; }
+	public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+	public Integer getNumOfActiveCollaborators() { return numOfActiveCollaborators; }
+	public void setNumOfActiveCollaborators(Integer numOfActiveCollaborators) { this.numOfActiveCollaborators = numOfActiveCollaborators; }
+	public Pane getShapesPane() { return shapesPane; }
+	public void setShapesPane(Pane shapesPane) { this.shapesPane = shapesPane; }
+	public String getSketchId() { return sketchId; }
+	public void setSketchId(String sketchId) { this.sketchId = sketchId; }
+	public HBox getHeaderHBox() { return headerHBox; }
+	public void setHeaderHBox(HBox headerHBox) { this.headerHBox = headerHBox; }
 
 }

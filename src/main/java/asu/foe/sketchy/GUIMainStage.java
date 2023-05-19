@@ -18,18 +18,18 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 	GUIRegistrationScene guiRegistrationScene;
 
 	private Stage stage;
-	public Scene scene;
+	private Scene scene;
 
 	// The following line from GUIApplication.java:
 	// "applicationContext.publishEvent(new StageReadyEvent(primaryStage));"
 	// Shall trigger this event handler
 	@Override
 	public void onApplicationEvent(StageReadyEvent event) {
-		scene = new Scene(guiRegistrationScene.getRoot()); // The first scene we have in the application is registration
-		scene.getStylesheets().add(this.getClass().getResource("/stylesheet.css").toExternalForm());
+		setScene(new Scene(guiRegistrationScene.getRoot())); // The first scene we have in the application is registration
+		getScene().getStylesheets().add(this.getClass().getResource("/stylesheet.css").toExternalForm());
 		stage = event.getStage();
 		stage.setTitle("Sketchy");
-		stage.setScene(scene);
+		stage.setScene(getScene());
 		stage.setMinWidth(1280);
 		stage.setMinHeight(720);
 		stage.setWidth(1280);
@@ -37,5 +37,8 @@ public class GUIMainStage implements ApplicationListener<StageReadyEvent> {
 		stage.centerOnScreen();
 		stage.show();
 	}
+
+	public Scene getScene() { return scene; }
+	public void setScene(Scene scene) { this.scene = scene; }
 
 }

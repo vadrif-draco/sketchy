@@ -11,7 +11,7 @@ public class GUICollabUpdateHandlerService {
 	private HBox cursor;
 
 	public GUICollabUpdateHandlerService(GUISketchScene sketch, String userName) {
-		sketch.numOfActiveCollaborators++;
+		sketch.setNumOfActiveCollaborators(sketch.getNumOfActiveCollaborators() + 1);
 		Label userNameLabel = new Label(userName);
 		userNameLabel.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold; -fx-background-color: rgba(0,0,0,0);");
 		ImageView cursorImageView = new ImageView(new Image("icons/cursor.png"));
@@ -19,8 +19,8 @@ public class GUICollabUpdateHandlerService {
 		cursorImageView.setPreserveRatio(true);
 		cursor = new HBox(cursorImageView, userNameLabel);
 		cursor.setSpacing(8);
-		sketch.shapesPane.getChildren().add(cursor);
-		sketch.numOfActiveCollaborators++;
+		sketch.getShapesPane().getChildren().add(cursor);
+		sketch.setNumOfActiveCollaborators(sketch.getNumOfActiveCollaborators() + 1);
 	}
 
 	public void moveMouse(GUISketchScene sketch, double x, double y) {
@@ -29,7 +29,7 @@ public class GUICollabUpdateHandlerService {
 	}
 
 	public void removeFrom(GUISketchScene sketch) {
-		sketch.shapesPane.getChildren().remove(cursor);
-		sketch.numOfActiveCollaborators--;
+		sketch.getShapesPane().getChildren().remove(cursor);
+		sketch.setNumOfActiveCollaborators(sketch.getNumOfActiveCollaborators() - 1);
 	}
 }

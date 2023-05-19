@@ -51,7 +51,7 @@ public class GUISketchUpdateHandlerAspect {
 
 		// Set the session Id (unique per sketch session) for the transaction
 		// It is necessary so that a producer session doesn't consume what it produces
-		transaction.setSessionId(sketch.sessionId);
+		transaction.setSessionId(sketch.getSessionId());
 
 		// Set the transaction's pen and mouse coordinates (which were passed as arguments to the handler)
 		transaction.setPen((GUIPen) joinPoint.getArgs()[1]);
@@ -59,8 +59,8 @@ public class GUISketchUpdateHandlerAspect {
 		transaction.setMouseY((double) joinPoint.getArgs()[3]);
 
 		// Extract current number of shapes in the sketch
-		Integer numOfShapes = sketch.shapesPane.getChildren().size() - sketch.numOfActiveCollaborators;
-		Integer prevNumOfShapes = prevNumOfShapesPerSketch.get(sketch.sketchId);
+		Integer numOfShapes = sketch.getShapesPane().getChildren().size() - sketch.getNumOfActiveCollaborators();
+		Integer prevNumOfShapes = prevNumOfShapesPerSketch.get(sketch.getSketchId());
 
 		// According to the current number of shapes compared to the previous one, determine the type of change
 		if (prevNumOfShapes != null) {
@@ -72,10 +72,10 @@ public class GUISketchUpdateHandlerAspect {
 		}
 
 		// Update memory for the next comparison for this sketch
-		prevNumOfShapesPerSketch.put(sketch.sketchId, numOfShapes);
+		prevNumOfShapesPerSketch.put(sketch.getSketchId(), numOfShapes);
 
 		// Finally, send the transaction
-		String sketchId = SketchyApplication.currentSketch.getId().toString();
+		String sketchId = SketchyApplication.getCurrentSketch().getId().toString();
 		guiSketchUpdateKafkaTemplate.send("sketch-updates-" + sketchId, "transaction", transaction);
 
 	}

@@ -92,10 +92,10 @@ public class GUIRegistrationScene {
 			user.setPassword(passwordField.getText());
 
 			// Save the User object to the database using the UserRepository and set it as the current user
-			SketchyApplication.currentUser = userRepository.save(user);
+			SketchyApplication.setCurrentUser(userRepository.save(user));
 
 			// Redirect to sketch list upon successful registration...
-			mainStage.scene.setRoot(sketchListScene.getRoot());
+			mainStage.getScene().setRoot(sketchListScene.getRoot());
 		});
 
 		// Create an HBox to hold the "Register" and "Login" buttons
@@ -111,7 +111,7 @@ public class GUIRegistrationScene {
 		gotoLoginButton.setOnAction(event -> {
 
 			// Get the new scene and set it to the stage
-			mainStage.scene.setRoot(loginScene.getRoot());
+			mainStage.getScene().setRoot(loginScene.getRoot());
 
 		});
 

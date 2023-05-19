@@ -40,7 +40,7 @@ public class GUISketchUpdateListener {
 				// The group ID for this listener (unique per listener... each group has one listener)
 				groupId = "#{__listener.id}")
 	public void handleIncomingChanges(KafkaGUISketchUpdateTransaction transaction) {
-		if (!transaction.getSessionId().equals(currentSketch.sessionId)) {
+		if (!transaction.getSessionId().equals(currentSketch.getSessionId())) {
 			// This runnable is used to handle incoming sketch changes in parallel without interrupting the normal usage of the sketch
 			Platform.runLater(new Runnable() {
 				@Override

@@ -44,7 +44,7 @@ public class GUISketchUpdateHandlerService {
 			currentPolyline.getPoints().addAll(new Double[] { x, y });
 			currentPolyline.setStroke(pen.strokeColorAsJavaFXColor());
 			currentPolyline.setStrokeWidth(pen.getStrokeWidth());
-			sketch.shapesPane.getChildren().add(currentPolyline);
+			sketch.getShapesPane().getChildren().add(currentPolyline);
 			break;
 		case LINE:
 			currentLine = new Line();
@@ -54,7 +54,7 @@ public class GUISketchUpdateHandlerService {
 			currentLine.setEndY(y);
 			currentLine.setStroke(pen.strokeColorAsJavaFXColor());
 			currentLine.setStrokeWidth(pen.getStrokeWidth());
-			sketch.shapesPane.getChildren().add(currentLine);
+			sketch.getShapesPane().getChildren().add(currentLine);
 			break;
 		case RECTANGLE:
 			currentRectangleX = x;
@@ -65,7 +65,7 @@ public class GUISketchUpdateHandlerService {
 			currentRectangle.setFill(Color.TRANSPARENT);
 			currentRectangle.setStroke(pen.strokeColorAsJavaFXColor());
 			currentRectangle.setStrokeWidth(pen.getStrokeWidth());
-			sketch.shapesPane.getChildren().add(currentRectangle);
+			sketch.getShapesPane().getChildren().add(currentRectangle);
 			break;
 		case ELLIPSE:
 			currentEllipseX = x;
@@ -76,7 +76,7 @@ public class GUISketchUpdateHandlerService {
 			currentEllipse.setFill(Color.TRANSPARENT);
 			currentEllipse.setStroke(pen.strokeColorAsJavaFXColor());
 			currentEllipse.setStrokeWidth(pen.getStrokeWidth());
-			sketch.shapesPane.getChildren().add(currentEllipse);
+			sketch.getShapesPane().getChildren().add(currentEllipse);
 			break;
 		case ERASER:
 			break;
@@ -91,7 +91,7 @@ public class GUISketchUpdateHandlerService {
 			currentRectangle.setStroke(Color.rgb(0, 0, 0, 0.9));
 			currentRectangle.setStrokeType(StrokeType.OUTSIDE);
 			currentRectangle.setStrokeWidth(0.5);
-			sketch.shapesPane.getChildren().add(currentRectangle);
+			sketch.getShapesPane().getChildren().add(currentRectangle);
 			break;
 		default:
 			break;
@@ -123,7 +123,7 @@ public class GUISketchUpdateHandlerService {
 			// Go through all shapes to see if we're intersecting with any
 			// Priority goes to smaller shapes in case of intersection with multiple shapes
 			Node intersectingNode = null;
-			for (Node node : sketch.shapesPane.getChildren()) {
+			for (Node node : sketch.getShapesPane().getChildren()) {
 				if (node.getBoundsInParent().intersects(x, y, 0, 0)) {
 					if (intersectingNode == null || node.computeAreaInScreen() < intersectingNode.computeAreaInScreen())
 						intersectingNode = node;
@@ -149,21 +149,21 @@ public class GUISketchUpdateHandlerService {
 	public void handleMouseRelease(GUISketchScene sketch, GUIPen pen, double x, double y) {
 		switch (pen.getDrawingMode()) {
 		case ERASER:
-			sketch.shapesPane.getChildren().remove(nodeToErase);
+			sketch.getShapesPane().getChildren().remove(nodeToErase);
 			nodeToErase = null;
 			break;
 		case OCR:
-			sketch.shapesPane.getChildren().remove(currentRectangle);
+			sketch.getShapesPane().getChildren().remove(currentRectangle);
 			SnapshotParameters params = new SnapshotParameters();
 			params.setViewport(new Rectangle2D(
 						currentRectangle.getX(),
 						currentRectangle.getY(),
 						currentRectangle.getWidth(),
 						currentRectangle.getHeight()));
-			WritableImage imgReturn = sketch.shapesPane.snapshot(params, null);
-			sketch.shapesPane.getChildren().add(currentRectangle);
+			WritableImage imgReturn = sketch.getShapesPane().snapshot(params, null);
+			sketch.getShapesPane().getChildren().add(currentRectangle);
 			// TODO: @AS+NY Apply OCR on imgReturn then present a dialog with text OCR'ed
-			sketch.shapesPane.getChildren().remove(currentRectangle);
+			sketch.getShapesPane().getChildren().remove(currentRectangle);
 			break;
 		default:
 			break;

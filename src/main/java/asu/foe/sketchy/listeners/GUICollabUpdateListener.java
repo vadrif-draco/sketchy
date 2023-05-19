@@ -34,7 +34,7 @@ public class GUICollabUpdateListener {
 	@KafkaListener(topics = { "#{__listener.topic}" }, groupId = "#{__listener.id}", //
 				containerFactory = "guiCollabUpdateKafkaListenerContainerFactory")
 	public void handleIncomingChanges(KafkaGUICollabUpdateTransaction transaction) {
-		if (!transaction.getSessionId().equals(currentSketch.sessionId)) {
+		if (!transaction.getSessionId().equals(currentSketch.getSessionId())) {
 			Platform.runLater(new Runnable() {
 				@Override
 				public void run() {

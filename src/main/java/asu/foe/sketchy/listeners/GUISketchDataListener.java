@@ -4,13 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 
 import asu.foe.sketchy.kafka.KafkaGUISketchDataTransaction;
-import asu.foe.sketchy.scenes.GUISketchScene;
+import asu.foe.sketchy.services.GUISketchDataHandlerService;
 import javafx.application.Platform;
 
 public class GUISketchDataListener {
 
 	@Autowired
-	private GUISketchScene currentSketch;
+	private GUISketchDataHandlerService sketchDataHandler;
 
 	private final String id;
 	private final String topic;
@@ -26,7 +26,7 @@ public class GUISketchDataListener {
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
-				currentSketch.updateSketchData(transaction.getTitle(), transaction.getDesc());
+				sketchDataHandler.updateSketchData(transaction.getTitle(), transaction.getDesc(), false);
 			}
 		});
 	}

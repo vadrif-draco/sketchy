@@ -15,7 +15,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 @Configuration
-public class KafkaGUIUpdateConsumerConfig {
+public class KafkaConsumersConfig {
 
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
@@ -64,6 +64,13 @@ public class KafkaGUIUpdateConsumerConfig {
 	@Bean
 	ConcurrentKafkaListenerContainerFactory<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaListenerContainerFactory() {
 		ConcurrentKafkaListenerContainerFactory<String, KafkaGUISketchDataTransaction> factory = new ConcurrentKafkaListenerContainerFactory<>();
+		factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(getCommonConfigProps()));
+		return factory;
+	}
+
+	@Bean
+	ConcurrentKafkaListenerContainerFactory<String, KafkaLoggingTransaction> loggingKafkaListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, KafkaLoggingTransaction> factory = new ConcurrentKafkaListenerContainerFactory<>();
 		factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(getCommonConfigProps()));
 		return factory;
 	}

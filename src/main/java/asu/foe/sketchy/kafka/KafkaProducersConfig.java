@@ -15,7 +15,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
 @Configuration
-public class KafkaGUIUpdateProducerConfig {
+public class KafkaProducersConfig {
 
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
@@ -55,6 +55,11 @@ public class KafkaGUIUpdateProducerConfig {
 
 	@Bean
 	KafkaTemplate<String, KafkaGUISketchDataTransaction> guiSketchDataKafkaTemplate() {
+		return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(getCommonConfigProps()));
+	}
+
+	@Bean
+	KafkaTemplate<String, KafkaLoggingTransaction> loggingTransactionKafkaTemplate() {
 		return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(getCommonConfigProps()));
 	}
 

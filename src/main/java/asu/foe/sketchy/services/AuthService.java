@@ -19,7 +19,7 @@ public class AuthService {
 	@Autowired
 	@Lazy
 	private GUILoginScene loginScene;
-
+	
 	@Autowired
 	private GUISketchListScene sketchListScene;
 	

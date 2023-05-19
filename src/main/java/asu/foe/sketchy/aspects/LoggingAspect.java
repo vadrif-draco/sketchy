@@ -11,10 +11,8 @@ import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
-public class LogginAspect {
+public class LoggingAspect {
 	
-	
-		
 	@Pointcut("execution(* asu.foe.sketchy.services.AuthService.login*(..))")
 	public void LoggingServiceHandling() {}
 	

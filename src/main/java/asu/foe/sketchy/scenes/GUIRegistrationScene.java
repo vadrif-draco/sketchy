@@ -3,12 +3,14 @@ package asu.foe.sketchy.scenes;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import asu.foe.sketchy.GUIMainStage;
 import asu.foe.sketchy.SketchyApplication;
 import asu.foe.sketchy.persistence.User;
 import asu.foe.sketchy.persistence.UserRepository;
+import asu.foe.sketchy.services.AuthService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -22,8 +24,12 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+@Lazy
 @Component
 public class GUIRegistrationScene {
+	
+	@Autowired
+	private AuthService authService;
 
 	@Autowired
 	private UserRepository userRepository;
@@ -31,8 +37,7 @@ public class GUIRegistrationScene {
 	@Autowired
 	private GUIMainStage mainStage;
 
-	@Autowired
-	private GUILoginScene loginScene;
+
 
 	@Autowired
 	private GUISketchListScene sketchListScene;
@@ -111,7 +116,8 @@ public class GUIRegistrationScene {
 		gotoLoginButton.setOnAction(event -> {
 
 			// Get the new scene and set it to the stage
-			mainStage.scene.setRoot(loginScene.getRoot());
+//			mainStage.scene.setRoot(loginScene.getRoot());
+			authService.register();
 
 		});
 

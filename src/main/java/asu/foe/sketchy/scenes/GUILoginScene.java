@@ -1,12 +1,13 @@
 package asu.foe.sketchy.scenes;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import asu.foe.sketchy.GUIMainStage;
 import asu.foe.sketchy.SketchyApplication;
 import asu.foe.sketchy.persistence.User;
 import asu.foe.sketchy.persistence.UserRepository;
+import asu.foe.sketchy.services.AuthService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -19,14 +20,15 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+
+@Lazy
 @Component
 public class GUILoginScene {
 
-	@Autowired
-	private GUIMainStage mainStage;
+
 
 	@Autowired
-	private GUISketchListScene sketchListScene;
+	private AuthService authService;
 
 	@Autowired
 	private UserRepository userRepository;
@@ -82,7 +84,9 @@ public class GUILoginScene {
 			alert.showAndWait();
 
 			// Redirect to the GUISketchList
-			mainStage.scene.setRoot(sketchListScene.getRoot());
+			//mainStage.scene.setRoot(sketchListScene.getRoot());
+			authService.login();
+			
 		});
 
 		// Create an HBox to hold the "Login"

@@ -5,6 +5,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.PartitionOffset;
 import org.springframework.kafka.annotation.TopicPartition;
 
+import asu.foe.sketchy.GUIPen;
 import asu.foe.sketchy.kafka.KafkaGUISketchUpdateTransaction;
 import asu.foe.sketchy.scenes.GUISketchScene;
 import asu.foe.sketchy.services.GUISketchUpdateHandlerService;
@@ -45,21 +46,24 @@ public class GUISketchUpdateListener {
 			Platform.runLater(new Runnable() {
 				@Override
 				public void run() {
-					switch (transaction.getUpdateType()) {
-					case ADD:
-						// All "node addition" operations are handled on the initial mouse press event
-						incomingUpdatesHandler.handleMousePress(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					case EDIT:
-						// All "node editing" operations are handled on the mouse drag event
-						incomingUpdatesHandler.handleMouseDrag(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					case REMOVE:
-						// All "node removal" operations are handled upon mouse release
-						incomingUpdatesHandler.handleMouseRelease(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
-						break;
-					default:
-						break;
+					// Do not propagate OCR usage
+					if (transaction.getPen().getDrawingMode() != GUIPen.DrawingMode.OCR) {
+						switch (transaction.getUpdateType()) {
+						case ADD:
+							// All "node addition" operations are handled on the initial mouse press event
+							incomingUpdatesHandler.handleMousePress(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+							break;
+						case EDIT:
+							// All "node editing" operations are handled on the mouse drag event
+							incomingUpdatesHandler.handleMouseDrag(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+							break;
+						case REMOVE:
+							// All "node removal" operations are handled upon mouse release
+							incomingUpdatesHandler.handleMouseRelease(currentSketch, transaction.getPen(), transaction.getMouseX(), transaction.getMouseY());
+							break;
+						default:
+							break;
+						}
 					}
 				}
 			});

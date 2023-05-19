@@ -1,12 +1,24 @@
 package asu.foe.sketchy.services;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.imageio.ImageIO;
+
 import org.springframework.stereotype.Component;
 
 import asu.foe.sketchy.GUIPen;
 import asu.foe.sketchy.scenes.GUISketchScene;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.SnapshotParameters;
+import javafx.scene.control.Alert;
+import javafx.scene.control.TextArea;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
@@ -164,7 +176,53 @@ public class GUISketchUpdateHandlerService {
 						currentRectangle.getHeight()));
 			WritableImage imgReturn = sketch.getShapesPane().snapshot(params, null);
 			sketch.getShapesPane().getChildren().add(currentRectangle);
-			// TODO: @AS+NY Apply OCR on imgReturn then present a dialog with text OCR'ed
+			Alert alert = new Alert(Alert.AlertType.INFORMATION);
+			alert.setTitle("OCR Service");
+			alert.setHeaderText("Now performing OCR on your selection...");
+			alert.setContentText("Please wait, contacting OCR server!\nThis should only take a few seconds...");
+			alert.show();
+			Task<Void> ocrTask = new Task<>() {
+				@Override
+				protected Void call() throws Exception {
+					String ocrResponse = null;
+					try {
+						File tempPngFile = File.createTempFile("temp", ".png");
+						ImageIO.write(SwingFXUtils.fromFXImage(imgReturn, null), "png", tempPngFile);
+						ocrResponse = OCRService.send(tempPngFile);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					final String finalOcrResponse = ocrResponse;
+					Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							if (finalOcrResponse != null) {
+								alert.setHeaderText("Done! Here's your OCR'ed content...");
+								alert.setWidth(480);
+								alert.setHeight(360);
+								TextArea finalOcrResponseTextArea = new TextArea(finalOcrResponse);
+								finalOcrResponseTextArea.setEditable(false);
+								finalOcrResponseTextArea.setFocusTraversable(false);
+								finalOcrResponseTextArea.setStyle("""
+											-fx-font-size: 14pt;
+											-fx-text-fill: gray;
+											-fx-background-insets: 0;
+											-fx-background-color: transparent;
+											""");
+								alert.getDialogPane().setContent(finalOcrResponseTextArea);
+							} else {
+								alert.setAlertType(Alert.AlertType.ERROR);
+								alert.setHeaderText("Whoops! Try again later?");
+								alert.setContentText("So sorry!\nCouldn't perform OCR on your selection...");
+							}
+							if (!alert.isShowing()) alert.show();
+						}
+					});
+					return null;
+				}
+			};
+			final ExecutorService executor = Executors.newSingleThreadExecutor();
+			executor.submit(ocrTask);
 			sketch.getShapesPane().getChildren().remove(currentRectangle);
 			break;
 		default:

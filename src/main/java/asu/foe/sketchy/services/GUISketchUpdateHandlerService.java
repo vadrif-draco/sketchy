@@ -8,6 +8,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
@@ -124,6 +125,7 @@ public class GUISketchUpdateHandlerService {
 			// Priority goes to smaller shapes in case of intersection with multiple shapes
 			Node intersectingNode = null;
 			for (Node node : sketch.getShapesPane().getChildren()) {
+				if (node instanceof HBox) continue; // Skip the HBox, which is the mouse
 				if (node.getBoundsInParent().intersects(x, y, 0, 0)) {
 					if (intersectingNode == null || node.computeAreaInScreen() < intersectingNode.computeAreaInScreen())
 						intersectingNode = node;
